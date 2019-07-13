@@ -61,7 +61,7 @@ class addImg(Resource):
         super(addImg, self).__init__()
         
     def get(self):
-        return htmlResp(render_template('addImg/html'))
+        return htmlResp(render_template('addImg.html'))
         
     def post(self):
         args = self.reqparse.parse_args()
@@ -70,7 +70,7 @@ class addImg(Resource):
         desc = args['description']
         print('current working dir{0}'.format(os.getcwd()))
         img = args['img']
-        direc = "/var/www/flaskSite/flaskSite/"
+        direc = ""#"/var/www/flaskSite/flaskSite/" may or may not need this for perms/deployment
         if img !=None:
             filename = title+"-"+img.filename
             img.save(direc+"static/gallery/"+filename)
@@ -94,7 +94,7 @@ class addImg(Resource):
 
 class editGallery(Resource):
     decorators = [auth.login_required]
-    
+ 
     def get(self):
         htmlContent= "<div class='gallery'> Click on an image to edit it<br>"
         images = galleryTable.query.all()[::-1]
@@ -108,9 +108,47 @@ class editGallery(Resource):
 
 class editImg(Resource):
     decorators = [auth.login_required]
+    
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('title', type = str, required = True)
+        self.reqparse.add_argument('acq_dat', type = str, required = True)
+        self.reqparse.add_argument('img', location='files', type = werkzeug.datastructures.FileStorage)#is required but handeled differently
+        self.reqparse.add_argument('description', type = str, required = True)
+        
     def get(self,idNum):
         entry = galleryTable.query.filter_by(id=idNum).first()
-        return htmlResp(render_template('editImg.html',title=entry.title,date=entry.acquired_date, desc=entry.description))
+        return htmlResp(render_template('editImg.html',title=entry.title,date=entry.acquired_date, desc=entry.description,id=idNum))
+        
+    def post(self,idNum):
+        #Dont necessarily need new image
+        args = self.reqparse.parse_args()
+        title = args['title']
+        acq_dat = args['acq_dat']
+        desc = args['description']
+        img = args['img']
+        #print('current working dir{0}'.format(os.getcwd()))
+        
+        direc = ""#"/var/www/flaskSite/flaskSite/"
+        if img !=None:#new image
+            filename = title+"-"+img.filename
+            img.save(direc+"static/gallery/"+filename)
+            if imghdr.what(direc+'static/gallery/'+filename) =='jpeg':
+               
+                im = Image.open(direc+"static/gallery/"+filename)
+                im.thumbnail((300,300))
+                im = im.convert("RGB")
+                im.save(direc+"static/gallery/thumb/T_"+filename,'JPEG')
+                
+                t_url = url_for('static',filename='gallery/thumb/T_'+filename)
+                url = url_for('static', filename='gallery/'+filename)
+                
+                form_status = dbe.edit(idNum,title,acq_dat,desc,url,t_url)
+            else:
+                form_status = "Error: Please supply a jpg!"
+        else:#No image added
+            form_status = dbe.edit(idNum,title,acq_dat,desc)#no new urls
+        return htmlResp(render_template('editImg.html',title=title,date=acq_dat, desc=desc,id=idNum, status=form_status))
     
 class gallery(Resource):
 
@@ -154,8 +192,8 @@ api.add_resource(favicon,'/favicon.ico')
 api.add_resource(addImg,'/add')
 api.add_resource(contact, '/contact')
 api.add_resource(about, '/about')
-api.add_resource(editGallery,'/edit')
-api.add_resource(editImg,'/edit/<int:idNum>')
+api.add_resource(editGallery,'/edit',endpoint='edit')
+api.add_resource(editImg,'/edit/<int:idNum>',endpoint='editImg')
 if __name__ == '__main__':
     app.run(debug=True)
 

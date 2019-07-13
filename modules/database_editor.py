@@ -2,6 +2,7 @@
 from modules.database import galleryTable, db
 from datetime import date
 from sqlalchemy import desc
+import re
 
 def titleCheck(title):
     check = title.split(' ')
@@ -12,14 +13,22 @@ def titleCheck(title):
             return False
                 
     return True
+
+def dateFormat(dat_acq):
+    dat_a = re.split('/|-',dat_acq)
+    for sub in dat_a:
+        if not sub.isdigit():
+            return "ER"
         
+    return date(int(dat_a[0]),int(dat_a[1]),int(dat_a[2]))
+    
 class gallery():
     def printing(self):
         for entry in galleryTable.query.all():
             print(entry.title)
 
-    @staticmethod
     def insert(title, dat_acq, url,t_url, desc):
+        """inserts data, gives string status in response, should replace with custom exception"""
         query = galleryTable.query.all()
         if len(query)>0:
             id = query[-1].id+1
@@ -29,14 +38,12 @@ class gallery():
         
         if not titleCheck(title):
             return "Error: Title must contain alphanumeric characters"
-        print(title)
-        dat_a = dat_acq.split('/')
-        for sub in dat_a:
-            if not sub.isdigit():
-                return "Error: Please format date as YYYY/MM/DD"
+
         
-        date_acq= date(int(dat_a[0]),int(dat_a[1]),int(dat_a[2]))
-        
+        date_acq = dateFormat(dat_acq)
+        if date_acq == "ER":
+            return "Error: Please format date as YYYY/MM/DD"
+            
         new_entry = galleryTable(id,title,dat_pos,date_acq,url,t_url,desc)
         
        
@@ -44,6 +51,26 @@ class gallery():
         db.session.commit()
         return "Submitted!"
     
+    def edit(idNum,title,acq_dat,desc,*args):
+        entry = galleryTable.query.filter_by(id=idNum).first()
+        if len(args)>0:
+            entry.img_uri = args[0]
+            entry.imgThumb_uri = args[1]
+            
+        if not titleCheck(title):
+            return "Error: Title must contain alphanumeric characters"
+     
+        date_acq = dateFormat(acq_dat)
+        if date_acq == "ER":
+            return "Error: Please format date as YYYY/MM/DD"
+        entry.title = title
+        entry.acquired_date = date_acq
+        entry.desc = desc
+        print(entry.desc)
+        db.session.update(entry)
+        db.session.commit()
+        return "Success!"
+        
     def delete(self,entry):
 
         db.session.delete(entry)
@@ -64,7 +91,7 @@ class gallery():
    
 
 if __name__ == "__main__":
-   g = galler()
+   g = gallery()
    g.printing()
 
 
