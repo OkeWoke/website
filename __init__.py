@@ -31,7 +31,19 @@ def unauthorized():
 def add_header(response):
     response.cache_control.max_age = 600
     return response
-    
+
+class favicon(Resource):
+
+    def get(self):
+        return send_from_directory(os.path.join(app.root_path, 'static'),'favicon.ico', mimetype='image/vnd.microsoft.icon')
+                               
+class front(Resource):
+
+    def get(self):
+        latImg= galleryTable.query.all()[-1]
+        htmlContent = render_template('front.html', title=latImg.title, img_url=latImg.img_uri, gallery_url="/gallery/"+str(latImg.id) )
+        return Response(render_template('home.html', content = Markup(htmlContent),mimetype='text/html'))
+        
 class addImg(Resource):
     decorators = [auth.login_required]
     
@@ -86,23 +98,12 @@ class gallery(Resource):
             url = entry.imgThumb_uri
             id = entry.id
             
-            htmlContent+="<a href='https://okewoke.com/gallery/"+str(id)+"' ><img src='"+url+"'></a>"
+            htmlContent+="<a href='/gallery/"+str(id)+"' ><img src='"+url+"'></a>"
         htmlContent+="</div>"
         return Response(render_template('home.html', content = Markup(htmlContent)),mimetype='text/html')
 
         
-class favicon(Resource):
 
-    def get(self):
-        return send_from_directory(os.path.join(app.root_path, 'static'),'favicon.ico', mimetype='image/vnd.microsoft.icon')
-                               
-class front(Resource):
-
-    def get(self):
-        latImg= galleryTable.query.all()[-1]
-        htmlContent = render_template('front.html', title=latImg.title, img_url=latImg.img_uri, gallery_url="https://okewoke.com/gallery/"+str(latImg.id) )
-        return Response(render_template('home.html', content = Markup(htmlContent),mimetype='text/html'))
-        
 class galleryEntry(Resource):
 
     def get(self, idNum):
@@ -131,5 +132,5 @@ api.add_resource(addImg,'/add')
 api.add_resource(contact, '/contact')
 api.add_resource(about, '/about')
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
 
