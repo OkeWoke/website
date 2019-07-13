@@ -32,6 +32,10 @@ def add_header(response):
     response.cache_control.max_age = 600
     return response
 
+    
+def htmlResp(content):
+    return Response(render_template('home.html',content=Markup(content)),mimetype='text/html')
+
 class favicon(Resource):
 
     def get(self):
@@ -42,7 +46,7 @@ class front(Resource):
     def get(self):
         latImg= galleryTable.query.all()[-1]
         htmlContent = render_template('front.html', title=latImg.title, img_url=latImg.img_uri, gallery_url="/gallery/"+str(latImg.id) )
-        return Response(render_template('home.html', content = Markup(htmlContent),mimetype='text/html'))
+        return htmlResp(htmlContent)
         
 class addImg(Resource):
     decorators = [auth.login_required]
@@ -57,7 +61,7 @@ class addImg(Resource):
         super(addImg, self).__init__()
         
     def get(self):
-        return Response(render_template('home.html',content=Markup(render_template('addImg.html'))),mimetype='text/html')
+        return htmlResp(render_template('addImg/html'))
         
     def post(self):
         args = self.reqparse.parse_args()
@@ -85,23 +89,42 @@ class addImg(Resource):
                 form_status = "Error: Please supply a jpg!"
         else:
             form_status = "Error: No file selected!"
-       
-        return Response(render_template('home.html',content=Markup(render_template('addImg.html',status=form_status))),mimetype='text/html')
-        
+        return htmlResp(render_template('addImg.html',status=form_status))
+      
+
+class editGallery(Resource):
+    decorators = [auth.login_required]
+    
+    def get(self):
+        htmlContent= "<div class='gallery'> Click on an image to edit it<br>"
+        images = galleryTable.query.all()[::-1]
+        for entry in images:
+            url = entry.imgThumb_uri
+            id = entry.id
+            
+            htmlContent+="<a href='/edit/"+str(id)+"' ><img src='"+url+"'></a>"
+        htmlContent+="</div>"
+        return htmlResp(htmlContent)
+
+class editImg(Resource):
+    decorators = [auth.login_required]
+    def get(self,idNum):
+        entry = galleryTable.query.filter_by(id=idNum).first()
+        return htmlResp(render_template('editImg.html',title=entry.title,date=entry.acquired_date, desc=entry.description))
+    
 class gallery(Resource):
 
     def get(self):
         htmlContent= "<div class='gallery'>Click on an image for larger res and details!<br>"
         images = galleryTable.query.all()[::-1] 
-        print(type(images))
+        #print(type(images))
         for entry in images:
             url = entry.imgThumb_uri
             id = entry.id
             
             htmlContent+="<a href='/gallery/"+str(id)+"' ><img src='"+url+"'></a>"
         htmlContent+="</div>"
-        return Response(render_template('home.html', content = Markup(htmlContent)),mimetype='text/html')
-
+        return htmlResp(htmlContent)
         
 
 class galleryEntry(Resource):
@@ -109,20 +132,20 @@ class galleryEntry(Resource):
     def get(self, idNum):
         entry = galleryTable.query.filter_by(id=idNum).first()        
         htmlContent= render_template('post.html', title=entry.title, dat_cre=entry.acquired_date, dat_pos=entry.post_date, img_url =entry.img_uri,description=entry.description)
-        return Response(render_template('home.html', content = Markup(htmlContent)),mimetype='text/html')
-        
+        return htmlResp(htmlContent)
+       
 class contact(Resource):
 
     def get(self):
         htmlContent=render_template('contact.html')
-        return Response(render_template('home.html', content = Markup(htmlContent)),mimetype='text/html')
+        return htmlResp(htmlContent)
         
 class about(Resource):
 
     def get(self):
         htmlContent= render_template('about.html')
-        return Response(render_template('home.html', content = Markup(htmlContent)),mimetype='text/html')
-        
+        return htmlResp(htmlContent)
+       
        
 api.add_resource(galleryEntry, '/gallery/<int:idNum>',endpoint='gal')
 api.add_resource(front, '/', endpoint='galL')
@@ -131,6 +154,8 @@ api.add_resource(favicon,'/favicon.ico')
 api.add_resource(addImg,'/add')
 api.add_resource(contact, '/contact')
 api.add_resource(about, '/about')
+api.add_resource(editGallery,'/edit')
+api.add_resource(editImg,'/edit/<int:idNum>')
 if __name__ == '__main__':
     app.run(debug=True)
 
