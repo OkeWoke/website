@@ -1,5 +1,4 @@
-#from flaskSite.modules.database import galleryTable, db
-from modules.database import galleryTable, db
+from flaskSite.modules.database import galleryTable, db
 from datetime import date
 from sqlalchemy import desc
 

@@ -1,11 +1,8 @@
 from flask import Flask, jsonify,Response,url_for, send_from_directory, render_template, Markup,make_response
 from flask_restful import Api, Resource, reqparse
 from flask_httpauth import HTTPBasicAuth
-#Two lines below are commented out as namespace changes when deployed on apache
-#from flaskSite.modules.database import galleryTable, db
-#from flaskSite.modules.database_editor import gallery as dbe
-from modules.database_editor import gallery as dbe
-from modules.database import galleryTable, db
+from flaskSite.modules.database import galleryTable, db
+from flaskSite.modules.database_editor import gallery as dbe
 from PIL import Image
 import os, math,werkzeug,imghdr
 
@@ -132,5 +129,5 @@ api.add_resource(addImg,'/add')
 api.add_resource(contact, '/contact')
 api.add_resource(about, '/about')
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
 
