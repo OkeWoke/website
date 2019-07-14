@@ -4,7 +4,7 @@ from flask_httpauth import HTTPBasicAuth
 #Two lines below are commented out as namespace changes when deployed on apache
 #from flaskSite.modules.database import galleryTable, db
 #from flaskSite.modules.database_editor import gallery as dbe
-from modules.database_editor import gallery as dbe
+from modules.database_editor import gallery as galDBE
 from modules.database import galleryTable, db
 from PIL import Image
 import os, math,werkzeug,imghdr
@@ -15,7 +15,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 api = Api(app)
 auth = HTTPBasicAuth()
 db.init_app(app)
-
+dbe = galDBE(db)
 #basic auth used, requires SSL for any security.
 @auth.get_password
 def get_password(username):
@@ -29,7 +29,7 @@ def unauthorized():
     
 @app.after_request
 def add_header(response):
-    response.cache_control.max_age = 600
+    response.cache_control.max_age = 0
     return response
 
     
@@ -127,10 +127,10 @@ class editImg(Resource):
         acq_dat = args['acq_dat']
         desc = args['description']
         img = args['img']
-        #print('current working dir{0}'.format(os.getcwd()))
-        
+
         direc = ""#"/var/www/flaskSite/flaskSite/"
         if img !=None:#new image
+
             filename = title+"-"+img.filename
             img.save(direc+"static/gallery/"+filename)
             if imghdr.what(direc+'static/gallery/'+filename) =='jpeg':
@@ -148,6 +148,7 @@ class editImg(Resource):
                 form_status = "Error: Please supply a jpg!"
         else:#No image added
             form_status = dbe.edit(idNum,title,acq_dat,desc)#no new urls
+
         return htmlResp(render_template('editImg.html',title=title,date=acq_dat, desc=desc,id=idNum, status=form_status))
     
 class gallery(Resource):
@@ -155,7 +156,7 @@ class gallery(Resource):
     def get(self):
         htmlContent= "<div class='gallery'>Click on an image for larger res and details!<br>"
         images = galleryTable.query.all()[::-1] 
-        #print(type(images))
+
         for entry in images:
             url = entry.imgThumb_uri
             id = entry.id
