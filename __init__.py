@@ -1,11 +1,14 @@
 from flask import Flask, jsonify,Response,url_for, send_from_directory, render_template, Markup,make_response
 from flask_restful import Api, Resource, reqparse
 from flask_httpauth import HTTPBasicAuth
+
 #Two lines below are commented out as namespace changes when deployed on apache
-#from flaskSite.modules.database import galleryTable, db
-#from flaskSite.modules.database_editor import gallery as dbe
-from modules.database_editor import gallery as galDBE
-from modules.database import galleryTable, db
+from flaskSite.modules.database import galleryTable, db
+from flaskSite.modules.database_editor import gallery as galDBE
+#from modules.database_editor import gallery as galDBE
+#from modules.database import galleryTable, db
+
+
 from PIL import Image
 import os, math,werkzeug,imghdr
 
@@ -70,7 +73,7 @@ class addImg(Resource):
         desc = args['description']
         print('current working dir{0}'.format(os.getcwd()))
         img = args['img']
-        direc = ""#"/var/www/flaskSite/flaskSite/" may or may not need this for perms/deployment
+        direc = "/var/www/flaskSite/flaskSite/" 
         if img !=None:
             filename = title+"-"+img.filename
             img.save(direc+"static/gallery/"+filename)
@@ -128,7 +131,7 @@ class editImg(Resource):
         desc = args['description']
         img = args['img']
 
-        direc = ""#"/var/www/flaskSite/flaskSite/"
+        direc = "/var/www/flaskSite/flaskSite/"
         if img !=None:#new image
 
             filename = title+"-"+img.filename
@@ -196,5 +199,5 @@ api.add_resource(about, '/about')
 api.add_resource(editGallery,'/edit',endpoint='edit')
 api.add_resource(editImg,'/edit/<int:idNum>',endpoint='editImg')
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
 

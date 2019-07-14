@@ -1,6 +1,9 @@
-#from flaskSite.modules.database import galleryTable, db
-from modules.database import galleryTable
+
+from flaskSite.modules.database import galleryTable
+#frm modules.database import galleryTable
 #from database import galleryTable, db
+
+
 from datetime import date
 import re
 
