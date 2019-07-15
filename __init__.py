@@ -3,14 +3,15 @@ from flask_restful import Api, Resource, reqparse
 from flask_httpauth import HTTPBasicAuth
 
 #Two lines below are commented out as namespace changes when deployed on apache
-from flaskSite.modules.database import galleryTable, db
-from flaskSite.modules.database_editor import gallery as galDBE
-#from modules.database_editor import gallery as galDBE
-#from modules.database import galleryTable, db
+#from flaskSite.modules.database import galleryTable, db
+#from flaskSite.modules.database_editor import gallery as galDBE
+from modules.database_editor import gallery as galDBE
+from modules.database import galleryTable, db
 
 
 from PIL import Image
-import os, math,werkzeug,imghdr
+from datetime import date
+import os, math, werkzeug, imghdr, re
 
 
 app  = Flask(__name__) #Not needed, this is performed inside database, might need to restructure this
@@ -68,33 +69,82 @@ class addImg(Resource):
         
     def post(self):
         args = self.reqparse.parse_args()
+        valid = validate(args, True)
         title = args['title']
         acq_dat = args['acq_dat']
         desc = args['description']
-        print('current working dir{0}'.format(os.getcwd()))
         img = args['img']
-        direc = "/var/www/flaskSite/flaskSite/" 
-        if img !=None:
-            filename = title+"-"+img.filename
-            img.save(direc+"static/gallery/"+filename)
-            if imghdr.what(direc+'static/gallery/'+filename) =='jpeg':
-               
-                im = Image.open(direc+"static/gallery/"+filename)
-                im.thumbnail((300,300))
-                im = im.convert("RGB")
-                im.save(direc+"static/gallery/thumb/T_"+filename,'JPEG')
-                
-                t_url = url_for('static',filename='gallery/thumb/T_'+filename)
-                url = url_for('static', filename='gallery/'+filename)
-                
-                form_status = dbe.insert(title,acq_dat,url,t_url,desc)
+        
+        print(type(desc))
+        if type(valid) != str:
+            handle = handleImg(title, img)
+            acq_dat = dateFormat(acq_dat)
+            if handle[0]:
+                dbe.insert(title,acq_dat,handle[1],handle[2],desc)
+                valid = "Success!"
             else:
-                form_status = "Error: Please supply a jpg!"
-        else:
-            form_status = "Error: No file selected!"
-        return htmlResp(render_template('addImg.html',status=form_status))
-      
+                valid = handle[1]
+        return htmlResp(render_template('addImg.html',status=valid))
+        
+def dateCheck(date_acq):
+    p = re.compile('^\d{4}[-|/]{1}[0-1]?\d{1}[-|/]{1}\d{1,2}$')
+    if p.match(date_acq) != None:
+        return True  
+    return False
 
+def dateFormat(date_acq):
+     date_acq = re.split('/|-',date_acq)
+     date_acq = date(int(date_acq[0]),int(date_acq[1]),int(date_acq[2]))  
+     return date_acq   
+     
+def titleCheck(title):
+    check = title.split(' ')
+    if len(check) == 0:
+        return False
+    for sub in check:
+        if not sub.isalnum():
+            return False
+                
+    return True     
+    
+def validate(args, req_img):
+    """Validates form data, title, date and img, returns True if valid else error string"""
+    title = args['title']
+    acq_dat = args['acq_dat']
+    desc = args['description']
+    img = args['img']
+   
+    if not titleCheck(title):
+        return "Error: Title must contain alphanumeric characters!"
+    if not dateCheck(acq_dat):
+        return "Error: Please format date as YYYY/MM/DD!"
+    
+    if img == None and req_img:
+        return "Error: No file selected!"
+    elif img!= None:
+        if img.filename[-4:]!="jpeg" and img.filename[-3:] != "jpg":
+            return "Error: Please supply a jpg!"
+        
+    return True
+    
+def handleImg(title, img):
+    direc = ""#"/var/www/flaskSite/flaskSite/" 
+    filename = title+"-"+img.filename
+    img.save(direc+"static/gallery/"+filename)
+    if imghdr.what(direc+'static/gallery/'+filename) =='jpeg':
+               
+        im = Image.open(direc+"static/gallery/"+filename)
+        im.thumbnail((300,300))
+        im = im.convert("RGB")
+        im.save(direc+"static/gallery/thumb/T_"+filename,'JPEG')
+                
+        t_url = url_for('static',filename='gallery/thumb/T_'+filename)
+        url = url_for('static', filename='gallery/'+filename)
+                
+        return (True, url, t_url)
+    else:
+        return (False, "Error: Please supply a jpg!")
+            
 class editGallery(Resource):
     decorators = [auth.login_required]
  
@@ -102,7 +152,7 @@ class editGallery(Resource):
         htmlContent= "<div class='gallery'> Click on an image to edit it<br>"
         images = galleryTable.query.all()[::-1]
         for entry in images:
-            url = entry.imgThumb_uri
+            url = entry.img_thumb_uri
             id = entry.id
             
             htmlContent+="<a href='/edit/"+str(id)+"' ><img src='"+url+"'></a>"
@@ -119,40 +169,33 @@ class editImg(Resource):
         self.reqparse.add_argument('img', location='files', type = werkzeug.datastructures.FileStorage)#is required but handeled differently
         self.reqparse.add_argument('description', type = str, required = True)
         
-    def get(self,idNum):
-        entry = galleryTable.query.filter_by(id=idNum).first()
-        return htmlResp(render_template('editImg.html',title=entry.title,date=entry.acquired_date, desc=entry.description,id=idNum))
+    def get(self, id_num):
+        entry = galleryTable.query.filter_by(id=id_num).first()
+        return htmlResp(render_template('editImg.html',title=entry.title,date=entry.acquired_date, desc=entry.description,id=id_num))
         
-    def post(self,idNum):
+    def post(self, id_num):
         #Dont necessarily need new image
         args = self.reqparse.parse_args()
         title = args['title']
         acq_dat = args['acq_dat']
         desc = args['description']
         img = args['img']
+        valid = validate(args, False)
 
-        direc = "/var/www/flaskSite/flaskSite/"
-        if img !=None:#new image
-
-            filename = title+"-"+img.filename
-            img.save(direc+"static/gallery/"+filename)
-            if imghdr.what(direc+'static/gallery/'+filename) =='jpeg':
-               
-                im = Image.open(direc+"static/gallery/"+filename)
-                im.thumbnail((300,300))
-                im = im.convert("RGB")
-                im.save(direc+"static/gallery/thumb/T_"+filename,'JPEG')
+        if type(valid) != str:
+            acq_dat = dateFormat(acq_dat)
+            if img != None:
+                handle = handleImg(title, img)
                 
-                t_url = url_for('static',filename='gallery/thumb/T_'+filename)
-                url = url_for('static', filename='gallery/'+filename)
-                
-                form_status = dbe.edit(idNum,title,acq_dat,desc,url,t_url)
+                if handle[0]:
+                    dbe.edit(id_num, title, acq_dat,desc, handle[1], handle[2])
+                    valid = "Success!"
+                else:
+                    valid = handle[1]
             else:
-                form_status = "Error: Please supply a jpg!"
-        else:#No image added
-            form_status = dbe.edit(idNum,title,acq_dat,desc)#no new urls
-
-        return htmlResp(render_template('editImg.html',title=title,date=acq_dat, desc=desc,id=idNum, status=form_status))
+                dbe.edit(id_num, title, acq_dat, desc)
+                valid = "Success!"
+        return htmlResp(render_template('editImg.html',title=title,date=acq_dat, desc=desc,id=id_num, status=valid))
     
 class gallery(Resource):
 
@@ -161,18 +204,17 @@ class gallery(Resource):
         images = galleryTable.query.all()[::-1] 
 
         for entry in images:
-            url = entry.imgThumb_uri
+            url = entry.img_thumb_uri
             id = entry.id
             
             htmlContent+="<a href='/gallery/"+str(id)+"' ><img src='"+url+"'></a>"
         htmlContent+="</div>"
-        return htmlResp(htmlContent)
-        
+        return htmlResp(htmlContent)       
 
 class galleryEntry(Resource):
 
-    def get(self, idNum):
-        entry = galleryTable.query.filter_by(id=idNum).first()        
+    def get(self, id_num):
+        entry = galleryTable.query.filter_by(id=id_num).first()        
         htmlContent= render_template('post.html', title=entry.title, dat_cre=entry.acquired_date, dat_pos=entry.post_date, img_url =entry.img_uri,description=entry.description)
         return htmlResp(htmlContent)
        
@@ -187,9 +229,8 @@ class about(Resource):
     def get(self):
         htmlContent= render_template('about.html')
         return htmlResp(htmlContent)
-       
-       
-api.add_resource(galleryEntry, '/gallery/<int:idNum>',endpoint='gal')
+
+api.add_resource(galleryEntry, '/gallery/<int:id_num>',endpoint='gal')
 api.add_resource(front, '/', endpoint='galL')
 api.add_resource(gallery, '/gallery')
 api.add_resource(favicon,'/favicon.ico')
@@ -197,7 +238,8 @@ api.add_resource(addImg,'/add')
 api.add_resource(contact, '/contact')
 api.add_resource(about, '/about')
 api.add_resource(editGallery,'/edit',endpoint='edit')
-api.add_resource(editImg,'/edit/<int:idNum>',endpoint='editImg')
+api.add_resource(editImg,'/edit/<int:id_num>',endpoint='editImg')
+
 if __name__ == '__main__':
     app.run()
 
