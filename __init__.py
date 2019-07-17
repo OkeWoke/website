@@ -3,11 +3,10 @@ from flask_restful import Api, Resource, reqparse
 from flask_httpauth import HTTPBasicAuth
 
 #Two lines below are commented out as namespace changes when deployed on apache
-#from flaskSite.modules.database import galleryTable, db
+#from flaskSite.modules.database import GalleryTable, db
 #from flaskSite.modules.database_editor import gallery as galDBE
-from modules.database_editor import gallery as galDBE
-from modules.database import galleryTable, db
-
+from modules.database_editor import Gallery as galDBE
+from modules.database import GalleryTable, db
 
 from PIL import Image
 from datetime import date
@@ -38,7 +37,7 @@ def get_password(username):
 
 @auth.error_handler
 def unauthorized():
-    return make_response(jsonify({'error': 'Unauthorized access'}), 401)
+    return make_response(jsonify({'Error': 'Unauthorized access'}), 401)
     
 @app.after_request
 def add_header(response):
@@ -87,6 +86,7 @@ def validate(args, req_img):
     return True
     
 def handleImg(title, img):
+    """Handles saving image, takes title string and img object, returns true and urls or false and error string"""
     direc = ""#"/var/www/flaskSite/flaskSite/" 
     filename = title+"-"+img.filename
     img.save(direc+"static/gallery/"+filename)
@@ -105,21 +105,22 @@ def handleImg(title, img):
         return (False, "Error: Please supply a jpg!")
             
 def htmlResp(content):
+    """Common template line """
     return Response(render_template('home.html',content=Markup(content)),mimetype='text/html')
 
-class favicon(Resource):
+class Favicon(Resource):
 
     def get(self):
         return send_from_directory(os.path.join(app.root_path, 'static'),'favicon.ico', mimetype='image/vnd.microsoft.icon')
                                
-class front(Resource):
+class Front(Resource):
 
     def get(self):
-        latImg= galleryTable.query.all()[-1]
-        htmlContent = render_template('front.html', title=latImg.title, img_url=latImg.img_uri, gallery_url="/gallery/"+str(latImg.id) )
-        return htmlResp(htmlContent)
+        latImg= GalleryTable.query.all()[-1]
+        html_content = render_template('front.html', title=latImg.title, img_url=latImg.img_uri, gallery_url="/gallery/"+str(latImg.id) )
+        return htmlResp(html_content)
         
-class addImg(Resource):
+class AddImg(Resource):
     decorators = [auth.login_required]
     
     def __init__(self):
@@ -128,8 +129,8 @@ class addImg(Resource):
         self.reqparse.add_argument('acq_dat', type = str, required = True)
         self.reqparse.add_argument('img', location='files', type = werkzeug.datastructures.FileStorage)#is required but handeled differently
         self.reqparse.add_argument('description', type = str, required = True)
-      
-        super(addImg, self).__init__()
+        
+        
         
     def get(self):
         return htmlResp(render_template('addImg.html'))
@@ -154,32 +155,29 @@ class addImg(Resource):
         return htmlResp(render_template('addImg.html',status=valid))
         
 
-class editGallery(Resource):
+class EditGallery(Resource):
     decorators = [auth.login_required]
  
     def get(self):
-        htmlContent= "<div class='gallery'> Click on an image to edit it<br>"
-        images = galleryTable.query.all()[::-1]
+        html_content= "<div class='gallery'> Click on an image to edit it<br>"
+        images = GalleryTable.query.all()[::-1]
         for entry in images:
             url = entry.img_thumb_uri
             id = entry.id
             
-            htmlContent+="<a href='/edit/"+str(id)+"' ><img src='"+url+"'></a>"
-        htmlContent+="</div>"
-        return htmlResp(htmlContent)
+            html_content+="<a href='/edit/"+str(id)+"' ><img src='"+url+"'></a>"
+        html_content+="</div>"
+        return htmlResp(html_content)
 
-class editImg(Resource):
+class EditImg(AddImg):
+    """ Inherits from addImg's parsed request arguments"""
     decorators = [auth.login_required]
     
     def __init__(self):
-        self.reqparse = reqparse.RequestParser()
-        self.reqparse.add_argument('title', type = str, required = True)
-        self.reqparse.add_argument('acq_dat', type = str, required = True)
-        self.reqparse.add_argument('img', location='files', type = werkzeug.datastructures.FileStorage)#is required but handeled differently
-        self.reqparse.add_argument('description', type = str, required = True)
+        super(editImg, self).__init__()
         
     def get(self, id_num):
-        entry = galleryTable.query.filter_by(id=id_num).first()
+        entry = GalleryTable.query.filter_by(id=id_num).first()
         return htmlResp(render_template('editImg.html',title=entry.title,date=entry.acquired_date, desc=entry.description,id=id_num))
         
     def post(self, id_num):
@@ -205,48 +203,48 @@ class editImg(Resource):
                 valid = "Success!"
         return htmlResp(render_template('editImg.html',title=title,date=acq_dat, desc=desc,id=id_num, status=valid))
     
-class gallery(Resource):
+class Gallery(Resource):
 
     def get(self):
-        htmlContent= "<div class='gallery'>Click on an image for larger res and details!<br>"
-        images = galleryTable.query.all()[::-1] 
+        html_content= "<div class='gallery'>Click on an image for larger res and details!<br>"
+        images = GalleryTable.query.all()[::-1] 
 
         for entry in images:
             url = entry.img_thumb_uri
             id = entry.id
             
-            htmlContent+="<a href='/gallery/"+str(id)+"' ><img src='"+url+"'></a>"
-        htmlContent+="</div>"
-        return htmlResp(htmlContent)       
+            html_content+="<a href='/gallery/"+str(id)+"' ><img src='"+url+"'></a>"
+        html_content+="</div>"
+        return htmlResp(html_content)       
 
-class galleryEntry(Resource):
+class GalleryEntry(Resource):
 
     def get(self, id_num):
-        entry = galleryTable.query.filter_by(id=id_num).first()        
-        htmlContent= render_template('post.html', title=entry.title, dat_cre=entry.acquired_date, dat_pos=entry.post_date, img_url =entry.img_uri,description=entry.description)
-        return htmlResp(htmlContent)
+        entry = GalleryTable.query.filter_by(id=id_num).first()        
+        html_content= render_template('post.html', title=entry.title, dat_cre=entry.acquired_date, dat_pos=entry.post_date, img_url =entry.img_uri,description=entry.description)
+        return htmlResp(html_content)
        
-class contact(Resource):
+class Contact(Resource):
 
     def get(self):
-        htmlContent=render_template('contact.html')
-        return htmlResp(htmlContent)
+        html_content=render_template('contact.html')
+        return htmlResp(html_content)
         
-class about(Resource):
+class About(Resource):
 
     def get(self):
-        htmlContent= render_template('about.html')
-        return htmlResp(htmlContent)
+        html_content= render_template('about.html')
+        return htmlResp(html_content)
 
-api.add_resource(galleryEntry, '/gallery/<int:id_num>',endpoint='gal')
-api.add_resource(front, '/', endpoint='galL')
-api.add_resource(gallery, '/gallery')
-api.add_resource(favicon,'/favicon.ico')
-api.add_resource(addImg,'/add')
-api.add_resource(contact, '/contact')
-api.add_resource(about, '/about')
-api.add_resource(editGallery,'/edit',endpoint='edit')
-api.add_resource(editImg,'/edit/<int:id_num>',endpoint='editImg')
+api.add_resource(GalleryEntry, '/gallery/<int:id_num>',endpoint='gal')
+api.add_resource(Front, '/', endpoint='galL')
+api.add_resource(Gallery, '/gallery')
+api.add_resource(Favicon,'/favicon.ico')
+api.add_resource(AddImg,'/add')
+api.add_resource(Contact, '/contact')
+api.add_resource(About, '/about')
+api.add_resource(EditGallery,'/edit',endpoint='edit')
+api.add_resource(EditImg,'/edit/<int:id_num>',endpoint='editImg')
 
 if __name__ == '__main__':
     app.run()
