@@ -129,9 +129,7 @@ class AddImg(Resource):
         self.reqparse.add_argument('acq_dat', type = str, required = True)
         self.reqparse.add_argument('img', location='files', type = werkzeug.datastructures.FileStorage)#is required but handeled differently
         self.reqparse.add_argument('description', type = str, required = True)
-        
-        
-        
+  
     def get(self):
         return htmlResp(render_template('addImg.html'))
         
@@ -154,7 +152,6 @@ class AddImg(Resource):
                 valid = handle[1]
         return htmlResp(render_template('addImg.html',status=valid))
         
-
 class EditGallery(Resource):
     decorators = [auth.login_required]
  
@@ -174,7 +171,7 @@ class EditImg(AddImg):
     decorators = [auth.login_required]
     
     def __init__(self):
-        super(editImg, self).__init__()
+        super(EditImg, self).__init__()
         
     def get(self, id_num):
         entry = GalleryTable.query.filter_by(id=id_num).first()
@@ -248,4 +245,3 @@ api.add_resource(EditImg,'/edit/<int:id_num>',endpoint='editImg')
 
 if __name__ == '__main__':
     app.run()
-
