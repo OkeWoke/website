@@ -11,20 +11,29 @@ from modules.database import galleryTable, db
 
 from PIL import Image
 from datetime import date
-import os, math, werkzeug, imghdr, re
+import os, math, werkzeug, imghdr, re, json
 
+try:
+    with open('config.json','r') as config_file:
+        config_data = json.load(config_file)
+except FileNotFoundError:
+    print('No config file found, writing a default one')
+    config_data = {'db':'sqlite:///app.db', 'username':'userNameHere', 'password':'passwordHere'}
+    with open('config.json','w') as config_file:
+        json.dump(config_data, config_file, indent=4)
 
-app  = Flask(__name__) #Not needed, this is performed inside database, might need to restructure this
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+app  = Flask(__name__) 
+app.config['SQLALCHEMY_DATABASE_URI'] = config_data['db']
 api = Api(app)
 auth = HTTPBasicAuth()
 db.init_app(app)
 dbe = galDBE(db)
+
 #basic auth used, requires SSL for any security.
 @auth.get_password
 def get_password(username):
-    if username == 'userNameHere':
-        return 'passwordHere'
+    if username == config_data['username']:
+        return config_data['password']
     return None
 
 @auth.error_handler
@@ -36,56 +45,6 @@ def add_header(response):
     response.cache_control.max_age = 0
     return response
 
-    
-def htmlResp(content):
-    return Response(render_template('home.html',content=Markup(content)),mimetype='text/html')
-
-class favicon(Resource):
-
-    def get(self):
-        return send_from_directory(os.path.join(app.root_path, 'static'),'favicon.ico', mimetype='image/vnd.microsoft.icon')
-                               
-class front(Resource):
-
-    def get(self):
-        latImg= galleryTable.query.all()[-1]
-        htmlContent = render_template('front.html', title=latImg.title, img_url=latImg.img_uri, gallery_url="/gallery/"+str(latImg.id) )
-        return htmlResp(htmlContent)
-        
-class addImg(Resource):
-    decorators = [auth.login_required]
-    
-    def __init__(self):
-        self.reqparse = reqparse.RequestParser()
-        self.reqparse.add_argument('title', type = str, required = True)
-        self.reqparse.add_argument('acq_dat', type = str, required = True)
-        self.reqparse.add_argument('img', location='files', type = werkzeug.datastructures.FileStorage)#is required but handeled differently
-        self.reqparse.add_argument('description', type = str, required = True)
-      
-        super(addImg, self).__init__()
-        
-    def get(self):
-        return htmlResp(render_template('addImg.html'))
-        
-    def post(self):
-        args = self.reqparse.parse_args()
-        valid = validate(args, True)
-        title = args['title']
-        acq_dat = args['acq_dat']
-        desc = args['description']
-        img = args['img']
-        
-        print(type(desc))
-        if type(valid) != str:
-            handle = handleImg(title, img)
-            acq_dat = dateFormat(acq_dat)
-            if handle[0]:
-                dbe.insert(title,acq_dat,handle[1],handle[2],desc)
-                valid = "Success!"
-            else:
-                valid = handle[1]
-        return htmlResp(render_template('addImg.html',status=valid))
-        
 def dateCheck(date_acq):
     p = re.compile('^\d{4}[-|/]{1}[0-1]?\d{1}[-|/]{1}\d{1,2}$')
     if p.match(date_acq) != None:
@@ -145,6 +104,56 @@ def handleImg(title, img):
     else:
         return (False, "Error: Please supply a jpg!")
             
+def htmlResp(content):
+    return Response(render_template('home.html',content=Markup(content)),mimetype='text/html')
+
+class favicon(Resource):
+
+    def get(self):
+        return send_from_directory(os.path.join(app.root_path, 'static'),'favicon.ico', mimetype='image/vnd.microsoft.icon')
+                               
+class front(Resource):
+
+    def get(self):
+        latImg= galleryTable.query.all()[-1]
+        htmlContent = render_template('front.html', title=latImg.title, img_url=latImg.img_uri, gallery_url="/gallery/"+str(latImg.id) )
+        return htmlResp(htmlContent)
+        
+class addImg(Resource):
+    decorators = [auth.login_required]
+    
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('title', type = str, required = True)
+        self.reqparse.add_argument('acq_dat', type = str, required = True)
+        self.reqparse.add_argument('img', location='files', type = werkzeug.datastructures.FileStorage)#is required but handeled differently
+        self.reqparse.add_argument('description', type = str, required = True)
+      
+        super(addImg, self).__init__()
+        
+    def get(self):
+        return htmlResp(render_template('addImg.html'))
+        
+    def post(self):
+        args = self.reqparse.parse_args()
+        valid = validate(args, True)
+        title = args['title']
+        acq_dat = args['acq_dat']
+        desc = args['description']
+        img = args['img']
+        
+        print(type(desc))
+        if type(valid) != str:
+            handle = handleImg(title, img)
+            acq_dat = dateFormat(acq_dat)
+            if handle[0]:
+                dbe.insert(title,acq_dat,handle[1],handle[2],desc)
+                valid = "Success!"
+            else:
+                valid = handle[1]
+        return htmlResp(render_template('addImg.html',status=valid))
+        
+
 class editGallery(Resource):
     decorators = [auth.login_required]
  
@@ -174,7 +183,6 @@ class editImg(Resource):
         return htmlResp(render_template('editImg.html',title=entry.title,date=entry.acquired_date, desc=entry.description,id=id_num))
         
     def post(self, id_num):
-        #Dont necessarily need new image
         args = self.reqparse.parse_args()
         title = args['title']
         acq_dat = args['acq_dat']
