@@ -1,11 +1,7 @@
 #database.py
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-#if running without main app
-#app  = Flask(__name__)
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///../app.db'
-#db = SQLAlchemy(app)
-#else
+
 db = SQLAlchemy()
 class GalleryTable(db.Model):
     id = db.Column(db.Integer,primary_key=True)

@@ -2,11 +2,8 @@ from flask import Flask, jsonify,Response,url_for, send_from_directory, render_t
 from flask_restful import Api, Resource, reqparse
 from flask_httpauth import HTTPBasicAuth
 
-#Two lines below are commented out as namespace changes when deployed on apache
-#from flaskSite.modules.database import GalleryTable, db
-#from flaskSite.modules.database_editor import gallery as galDBE
-from modules.database_editor import Gallery as galDBE
-from modules.database import GalleryTable, db
+from flaskSite.modules.database import GalleryTable, db
+from flaskSite.modules.database_editor import Gallery as galDBE
 
 from PIL import Image
 from datetime import date
@@ -17,7 +14,7 @@ try:
         config_data = json.load(config_file)
 except FileNotFoundError:
     print('No config file found, writing a default one')
-    config_data = {'db':'sqlite:///app.db', 'username':'userNameHere', 'password':'passwordHere'}
+    config_data = {'db':'sqlite:///app.db', 'username':'userNameHere', 'password':'passwordHere','directory':''}
     with open('config.json','w') as config_file:
         json.dump(config_data, config_file, indent=4)
 
@@ -87,7 +84,7 @@ def validate(args, req_img):
     
 def handleImg(title, img):
     """Handles saving image, takes title string and img object, returns true and urls or false and error string"""
-    direc = ""#"/var/www/flaskSite/flaskSite/" 
+    direc = config_data['directory']#"/var/www/flaskSite/flaskSite/" 
     filename = title+"-"+img.filename
     img.save(direc+"static/gallery/"+filename)
     if imghdr.what(direc+'static/gallery/'+filename) =='jpeg':

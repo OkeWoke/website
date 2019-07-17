@@ -1,6 +1,5 @@
-#from flaskSite.modules.database import GalleryTable
-from modules.database import GalleryTable
-#from database import GalleryTable
+from flaskSite.modules.database import GalleryTable
+
 from datetime import date
 
 class Gallery():

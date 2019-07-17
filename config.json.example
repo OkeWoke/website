@@ -1,5 +1,6 @@
 {
     "db": "sqlite:///app.db",
     "username": "userNameHere",
-    "password": "passwordHere"
+    "password": "passwordHere",
+    "directory": ""
 }
