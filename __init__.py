@@ -76,9 +76,9 @@ def validate(args, req_img):
     
     if img == None and req_img:
         return "Error: No file selected!"
-    elif img!= None:
+    elif img!= None and img.filename !=:
         if img.filename[-4:]!="jpeg" and img.filename[-3:] != "jpg":
-            return "Error: Please supply a jpg!"
+            return "Error: Please supply a jpg!"+str(img.filename)
         
     return True
     
@@ -191,7 +191,7 @@ class EditImg(AddImg):
 
         if type(valid) != str:
             acq_dat = dateFormat(acq_dat)
-            if img != None:
+            if img != None and img.filename!="":
                 handle = handleImg(title, img)
                 
                 if handle[0]:
