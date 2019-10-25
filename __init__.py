@@ -126,6 +126,8 @@ class AddImg(Resource):
         self.reqparse.add_argument('acq_dat', type = str, required = True)
         self.reqparse.add_argument('img', location='files', type = werkzeug.datastructures.FileStorage)#is required but handeled differently
         self.reqparse.add_argument('description', type = str, required = True)
+        self.reqparse.add_argument('acq_description', type = str, required = True)
+        self.reqparse.add_argument('pro_description', type = str, required = True)
   
     def get(self):
         return htmlResp(render_template('addImg.html'))
@@ -136,14 +138,17 @@ class AddImg(Resource):
         title = args['title']
         acq_dat = args['acq_dat']
         desc = args['description']
+        acq_desc = args['acq_description']
+        pro_desc = args['pro_description']
         img = args['img']
+        
         
         print(type(desc))
         if type(valid) != str:
             handle = handleImg(title, img)
             acq_dat = dateFormat(acq_dat)
             if handle[0]:
-                dbe.insert(title,acq_dat,handle[1],handle[2],desc)
+                dbe.insert(title,acq_dat,handle[1],handle[2],desc,acq_desc,pro_desc)
                 valid = "Success!"
             else:
                 valid = handle[1]
@@ -172,13 +177,15 @@ class EditImg(AddImg):
         
     def get(self, id_num):
         entry = GalleryTable.query.filter_by(id=id_num).first()
-        return htmlResp(render_template('editImg.html',title=entry.title,date=entry.acquired_date, desc=entry.description,id=id_num))
+        return htmlResp(render_template('editImg.html',title=entry.title,date=entry.acquired_date, desc=entry.description,id=id_num,acq_desc=entry.acquisition_desc, pro_desc=entry.processing_desc))
         
     def post(self, id_num):
         args = self.reqparse.parse_args()
         title = args['title']
         acq_dat = args['acq_dat']
         desc = args['description']
+        acq_desc = args['acq_description']
+        pro_desc = args['pro_description']
         img = args['img']
         valid = validate(args, False)
 
@@ -188,14 +195,14 @@ class EditImg(AddImg):
                 handle = handleImg(title, img)
                 
                 if handle[0]:
-                    dbe.edit(id_num, title, acq_dat,desc, handle[1], handle[2])
+                    dbe.edit(id_num, title, acq_dat,desc,acq_desc, pro_desc, handle[1], handle[2])
                     valid = "Success!"
                 else:
                     valid = handle[1]
             else:
-                dbe.edit(id_num, title, acq_dat, desc)
+                dbe.edit(id_num, title, acq_dat, desc, acq_desc, pro_desc)
                 valid = "Success!"
-        return htmlResp(render_template('editImg.html',title=title,date=acq_dat, desc=desc,id=id_num, status=valid))
+        return htmlResp(render_template('editImg.html',title=title,date=acq_dat, desc=desc,id=id_num, status=valid,acq_desc=acq_desc, pro_desc=pro_desc))
     
 class Gallery(Resource):
 
@@ -215,7 +222,7 @@ class GalleryEntry(Resource):
 
     def get(self, id_num):
         entry = GalleryTable.query.filter_by(id=id_num).first()        
-        html_content= render_template('post.html', title=entry.title, dat_cre=entry.acquired_date, dat_pos=entry.post_date, img_url =entry.img_uri,description=entry.description)
+        html_content= render_template('post.html', title=entry.title, dat_cre=entry.acquired_date, dat_pos=entry.post_date, img_url =entry.img_uri,description=entry.description, acq_description=entry.acquisition_desc,pro_description=entry.processing_desc)
         return htmlResp(html_content)
        
 class Contact(Resource):
