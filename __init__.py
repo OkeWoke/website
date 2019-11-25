@@ -1,4 +1,4 @@
-from flask import Flask, jsonify,Response,url_for, send_from_directory, render_template, Markup,make_response
+from flask import Flask, jsonify,Response,url_for, send_from_directory, render_template, Markup,make_response, request
 from flask_restful import Api, Resource, reqparse
 from flask_httpauth import HTTPBasicAuth
 
@@ -7,6 +7,7 @@ from flaskSite.modules.database_editor import Gallery as galDBE
 
 from PIL import Image
 from datetime import date
+import Utility as util
 import os, math, werkzeug, imghdr, re, json
 
 try:
@@ -25,6 +26,11 @@ auth = HTTPBasicAuth()
 db.init_app(app)
 dbe = galDBE(db)
 
+class GalleryAPI(Resource):
+    def get(self):
+        images = GalleryTable.query.all()[::-1]
+        return jsonify([i.serialize() for i in images])
+
 #basic auth used, requires SSL for any security.
 @auth.get_password
 def get_password(username):
@@ -39,48 +45,7 @@ def unauthorized():
 @app.after_request
 def add_header(response):
     response.cache_control.max_age = 0
-    return response
-
-def dateCheck(date_acq):
-    p = re.compile('^\d{4}[-|/]{1}[0-1]?\d{1}[-|/]{1}\d{1,2}$')
-    if p.match(date_acq) != None:
-        return True  
-    return False
-
-def dateFormat(date_acq):
-     date_acq = re.split('/|-',date_acq)
-     date_acq = date(int(date_acq[0]),int(date_acq[1]),int(date_acq[2]))  
-     return date_acq   
-     
-def titleCheck(title):
-    check = title.split(' ')
-    if len(check) == 0:
-        return False
-    for sub in check:
-        if not sub.isalnum():
-            return False
-                
-    return True     
-    
-def validate(args, req_img):
-    """Validates form data, title, date and img, returns True if valid else error string"""
-    title = args['title']
-    acq_dat = args['acq_dat']
-    desc = args['description']
-    img = args['img']
-   
-    if not titleCheck(title):
-        return "Error: Title must contain alphanumeric characters!"
-    if not dateCheck(acq_dat):
-        return "Error: Please format date as YYYY/MM/DD!"
-    
-    if img == None and req_img:
-        return "Error: No file selected!"
-    elif img!= None and img.filename !=:
-        if img.filename[-4:]!="jpeg" and img.filename[-3:] != "jpg":
-            return "Error: Please supply a jpg!"+str(img.filename)
-        
-    return True
+    return response 
     
 def handleImg(title, img):
     """Handles saving image, takes title string and img object, returns true and urls or false and error string"""
@@ -105,48 +70,37 @@ def htmlResp(content):
     """Common template line """
     return Response(render_template('home.html',content=Markup(content)),mimetype='text/html')
 
-class Favicon(Resource):
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),'favicon.ico', mimetype='image/vnd.microsoft.icon')                          
 
-    def get(self):
-        return send_from_directory(os.path.join(app.root_path, 'static'),'favicon.ico', mimetype='image/vnd.microsoft.icon')
-                               
-class Front(Resource):
+@app.route('/')
+def front():
+    latImg= GalleryTable.query.all()[-1]
+    html_content = render_template('front.html', title=latImg.title, img_url=latImg.img_uri, gallery_url="/gallery/"+str(latImg.id) )
+    return htmlResp(html_content)
 
-    def get(self):
-        latImg= GalleryTable.query.all()[-1]
-        html_content = render_template('front.html', title=latImg.title, img_url=latImg.img_uri, gallery_url="/gallery/"+str(latImg.id) )
-        return htmlResp(html_content)
-        
-class AddImg(Resource):
-    decorators = [auth.login_required]
-    
-    def __init__(self):
-        self.reqparse = reqparse.RequestParser()
-        self.reqparse.add_argument('title', type = str, required = True)
-        self.reqparse.add_argument('acq_dat', type = str, required = True)
-        self.reqparse.add_argument('img', location='files', type = werkzeug.datastructures.FileStorage)#is required but handeled differently
-        self.reqparse.add_argument('description', type = str, required = True)
-        self.reqparse.add_argument('acq_description', type = str, required = True)
-        self.reqparse.add_argument('pro_description', type = str, required = True)
-  
-    def get(self):
+@app.route('/add', methods=['GET', 'POST'])
+@auth.login_required
+def addImg():
+    if request.method == 'GET':
         return htmlResp(render_template('addImg.html'))
         
-    def post(self):
-        args = self.reqparse.parse_args()
-        valid = validate(args, True)
-        title = args['title']
-        acq_dat = args['acq_dat']
-        desc = args['description']
-        acq_desc = args['acq_description']
-        pro_desc = args['pro_description']
-        img = args['img']
+    elif request.method == 'POST':
         
+        args = request.form
+        title = args.get('title')
+        acq_dat = args.get('acq_dat')
+        desc = args.get('description')
+        acq_desc = args.get('acq_description')
+        pro_desc = args.get('pro_description')
+        img = request.files.get('img')
+        valid = util.validate(title, acq_dat, desc, img, True)
+       
         
-        print(type(desc))
         if type(valid) != str:
             handle = handleImg(title, img)
-            acq_dat = dateFormat(acq_dat)
+            acq_dat = util.dateFormat(acq_dat)
             if handle[0]:
                 dbe.insert(title,acq_dat,handle[1],handle[2],desc,acq_desc,pro_desc)
                 valid = "Success!"
@@ -154,43 +108,38 @@ class AddImg(Resource):
                 valid = handle[1]
         return htmlResp(render_template('addImg.html',status=valid))
         
-class EditGallery(Resource):
-    decorators = [auth.login_required]
- 
-    def get(self):
-        html_content= "<div class='gallery'> Click on an image to edit it<br>"
-        images = GalleryTable.query.all()[::-1]
-        for entry in images:
-            url = entry.img_thumb_uri
-            id = entry.id
-            
-            html_content+="<a href='/edit/"+str(id)+"' ><img src='"+url+"'></a>"
-        html_content+="</div>"
-        return htmlResp(html_content)
-
-class EditImg(AddImg):
-    """ Inherits from addImg's parsed request arguments"""
-    decorators = [auth.login_required]
-    
-    def __init__(self):
-        super(EditImg, self).__init__()
+@app.route('/edit', methods=['GET', 'POST'])
+@auth.login_required
+def editGallery():
+    html_content= "<div class='gallery'> Click on an image to edit it<br>"
+    images = GalleryTable.query.all()[::-1]
+    for entry in images:
+        url = entry.img_thumb_uri
+        id = entry.id
         
-    def get(self, id_num):
+        html_content+="<a href='/edit/"+str(id)+"' ><img src='"+url+"'></a>"
+    html_content+="</div>"
+    return htmlResp(html_content)
+
+@app.route('/edit/<int:id_num>', methods=['GET', 'POST'])
+@auth.login_required
+def editImg(id_num):       
+    if request.method == 'GET':
         entry = GalleryTable.query.filter_by(id=id_num).first()
         return htmlResp(render_template('editImg.html',title=entry.title,date=entry.acquired_date, desc=entry.description,id=id_num,acq_desc=entry.acquisition_desc, pro_desc=entry.processing_desc))
         
-    def post(self, id_num):
-        args = self.reqparse.parse_args()
-        title = args['title']
-        acq_dat = args['acq_dat']
-        desc = args['description']
-        acq_desc = args['acq_description']
-        pro_desc = args['pro_description']
-        img = args['img']
-        valid = validate(args, False)
+    elif request.method=='POST':
+        args = request.form
+        title = args.get('title')
+        acq_dat = args.get('acq_dat')
+        desc = args.get('description')
+        acq_desc = args.get('acq_description')
+        pro_desc = args.get('pro_description')
+        img = request.files.get('img')
+        valid = util.validate(title, acq_dat, desc, img, False)
 
         if type(valid) != str:
-            acq_dat = dateFormat(acq_dat)
+            acq_dat = util.dateFormat(acq_dat)
             if img != None and img.filename!="":
                 handle = handleImg(title, img)
                 
@@ -203,49 +152,41 @@ class EditImg(AddImg):
                 dbe.edit(id_num, title, acq_dat, desc, acq_desc, pro_desc)
                 valid = "Success!"
         return htmlResp(render_template('editImg.html',title=title,date=acq_dat, desc=desc,id=id_num, status=valid,acq_desc=acq_desc, pro_desc=pro_desc))
-    
-class Gallery(Resource):
 
-    def get(self):
-        html_content= "<div class='gallery'>Click on an image for larger res and details!<br>"
-        images = GalleryTable.query.all()[::-1] 
+@app.route('/gallery')
+def galleryGet():
+    html_content= "<div class='gallery'>Click on an image for larger res and details!<br>"
+    images = GalleryTable.query.all()[::-1] 
 
-        for entry in images:
-            url = entry.img_thumb_uri
-            id = entry.id
-            
-            html_content+="<a href='/gallery/"+str(id)+"' ><img src='"+url+"'></a>"
-        html_content+="</div>"
-        return htmlResp(html_content)       
-
-class GalleryEntry(Resource):
-
-    def get(self, id_num):
-        entry = GalleryTable.query.filter_by(id=id_num).first()        
-        html_content= render_template('post.html', title=entry.title, dat_cre=entry.acquired_date, dat_pos=entry.post_date, img_url =entry.img_uri,description=entry.description, acq_description=entry.acquisition_desc,pro_description=entry.processing_desc)
-        return htmlResp(html_content)
-       
-class Contact(Resource):
-
-    def get(self):
-        html_content=render_template('contact.html')
-        return htmlResp(html_content)
+    for entry in images:
+        url = entry.img_thumb_uri
+        id = entry.id
         
-class About(Resource):
+        html_content+="<a href='/gallery/"+str(id)+"' ><img src='"+url+"'></a>"
+    html_content+="</div>"
+    return htmlResp(html_content)       
 
-    def get(self):
-        html_content= render_template('about.html')
-        return htmlResp(html_content)
+@app.route('/gallery/<int:id_num>')
+def galleryEntry(id_num):
+    entry = GalleryTable.query.filter_by(id=id_num).first()        
+    html_content= render_template('post.html', title=entry.title, dat_cre=entry.acquired_date, dat_pos=entry.post_date, img_url =entry.img_uri,description=entry.description, acq_description=entry.acquisition_desc,pro_description=entry.processing_desc)
+    return htmlResp(html_content)
+    
+@app.route('/about')       
+def about():
+    html_content= render_template('about.html')
+    return htmlResp(html_content)
 
-api.add_resource(GalleryEntry, '/gallery/<int:id_num>',endpoint='gal')
-api.add_resource(Front, '/', endpoint='galL')
-api.add_resource(Gallery, '/gallery')
-api.add_resource(Favicon,'/favicon.ico')
-api.add_resource(AddImg,'/add')
-api.add_resource(Contact, '/contact')
-api.add_resource(About, '/about')
-api.add_resource(EditGallery,'/edit',endpoint='edit')
-api.add_resource(EditImg,'/edit/<int:id_num>',endpoint='editImg')
+@app.route('/contact')
+def contact():
+    html_content=render_template('contact.html')
+    return htmlResp(html_content)
 
+@app.route('/feed')
+def feed():
+    with open('rss.xml', 'r') as file:
+        return Response(file.read(), mimetype='text/xml')
+
+api.add_resource(GalleryAPI, '/api/')
 if __name__ == '__main__':
     app.run()

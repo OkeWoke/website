@@ -43,6 +43,18 @@ class GalleryTable(db.Model):
     def __repr__(self):
         return '<id %r>' % self.id
         
+    def serialize(self):
+        return {
+            "id" : self.id,
+            "title" : self.title,
+            "post date" : self.post_date,
+            "acquired date" : self.acquired_date,
+            "img url" : self.img_uri,
+            "img t url" : self.img_thumb_uri,
+            "description" : self.description,
+            "acquistion description": self.acquisition_desc,
+            "processing description": self.processing_desc
+            }
 if __name__ == "__main__":
     #migration
     manager.run()
