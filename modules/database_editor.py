@@ -11,7 +11,7 @@ class Gallery():
         for entry in GalleryTable.query.all():
             print(entry.title)
           
-    def insert(self, title, date_acq, url, t_url, desc):
+    def insert(self, title, date_acq, url, t_url, desc, desc_acq, desc_pro):
         query = GalleryTable.query.all()
         if len(query)>0:
             id = query[-1].id+1
@@ -19,11 +19,11 @@ class Gallery():
             id=0
 
         date_pos = date.today()
-        new_entry = GalleryTable(id,title,date_pos,date_acq,url,t_url,desc)
+        new_entry = GalleryTable(id,title,date_pos,date_acq,url,t_url,desc, desc_acq, desc_pro)
         self.db.session.add(new_entry)
         self.db.session.commit()      
 
-    def edit(self, id_num, title, date_acq, desc, *args):
+    def edit(self, id_num, title, date_acq, desc, desc_acq, desc_pro, *args):
         entry = GalleryTable.query.filter_by(id=id_num).first() 
         if len(args)>0:
             entry.img_uri = args[0]
@@ -32,6 +32,8 @@ class Gallery():
         entry.title = str(title)
         entry.acquired_date = date_acq
         entry.description = desc
+        entry.acquisition_desc = desc_acq
+        entry.processing_desc =  desc_pro
         self.db.session.commit()
 
     def delete(self, entry):
