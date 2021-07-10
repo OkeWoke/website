@@ -1,30 +1,31 @@
-from flaskSite.modules.database import GalleryTable
-
+#from flaskSite.modules.database import GalleryTable, BlogTable
+from database import GalleryTable, BlogTable, db
 from datetime import date
 
-class Gallery():
+class DbEditor():
     
-    def __init__(self, db):
+    def __init__(self, db, table):
         self.db = db
-     
+        self.table = table
+
     def printing(self):
-        for entry in GalleryTable.query.all():
+        for entry in self.table.query.all():
             print(entry.title)
           
     def insert(self, title, date_acq, url, t_url, desc, desc_acq, desc_pro):
-        query = GalleryTable.query.all()
+        query = self.table.query.all()
         if len(query)>0:
             id = query[-1].id+1
         else:
             id=0
 
         date_pos = date.today()
-        new_entry = GalleryTable(id,title,date_pos,date_acq,url,t_url,desc, desc_acq, desc_pro)
+        new_entry = self.table(id,title,date_pos,date_acq,url,t_url,desc, desc_acq, desc_pro)#change to kwargs?
         self.db.session.add(new_entry)
         self.db.session.commit()      
 
     def edit(self, id_num, title, date_acq, desc, desc_acq, desc_pro, *args):
-        entry = GalleryTable.query.filter_by(id=id_num).first() 
+        entry = self.table.query.filter_by(id=id_num).first() 
         if len(args)>0:
             entry.img_uri = args[0]
             entry.img_thumb_uri = args[1]
@@ -40,8 +41,43 @@ class Gallery():
         self.db.session.delete(entry)
         self.db.session.commit()
 
+
+class Blog():
+    
+    def __init__(self, db, table):
+        self.db = db
+        self.table = table
+     
+    def printing(self):
+        for entry in self.table.query.all():
+            print(entry.title)
+          
+    def insert(self, title, post_body):
+        query = self.table.query.all()
+        if len(query)>0:
+            id = query[-1].id+1
+        else:
+            id=0
+
+        date_pos = date.today()
+        new_entry = self.table(id, title, date_pos, post_body) #change to kwargs?
+        self.db.session.add(new_entry)
+        self.db.session.commit()      
+
+    def edit(self, id_num, title, date, post_body):
+        entry = self.table.query.filter_by(id=id_num).first() 
+        entry.title = str(title)
+        entry.post_date = date
+        entry.post_body = post_body
+        self.db.session.commit()
+
+    def delete(self, entry):
+        self.db.session.delete(entry)
+        self.db.session.commit()
+
+
 if __name__ == "__main__":
-   g = Gallery(db)
+   g = Blog(db, BlogTable)
    g.printing()
-   g.edit(11,"dddddddd","1000/12/12","del")
+   g.insert("dddddddd","dsdasdfhsduiohfds dsfdsfg")
    g.printing()

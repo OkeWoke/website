@@ -3,13 +3,16 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
 from flask_script import Manager
-from flask_migrate import Migrate, MigrateCommand
+#from flask_migrate import Migrate, MigrateCommand
 
 db = SQLAlchemy()
-""" Migration Code
+"""Migration Code"""
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 db = SQLAlchemy(app)
+
+
+"""
 migrate = Migrate(app, db)
 migrate.init_app(app,db) #,ender_as_batch=True
 manager = Manager(app)
@@ -55,6 +58,35 @@ class GalleryTable(db.Model):
             "acquistion description": self.acquisition_desc,
             "processing description": self.processing_desc
             }
-if __name__ == "__main__":
-    #migration
-    manager.run()
+
+
+class BlogTable(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(64), index= True, unique=False)
+    post_date = db.Column(db.Date, index=True,unique=False)
+    post_body = db.Column(db.Text,unique=True)
+
+    def __init__(self, id, title, post_date, post_body):
+        self.id = id
+        self.title = title
+        self.post_date = post_date
+        self.post_body = post_body
+
+    def __repr__(self):
+        return '<id %r>' % self.id
+        
+    def serialize(self):
+        return {
+            "id" : self.id,
+            "title" : self.title,
+            "post date" : self.post_date,
+            "post body" : self.post_body
+            }
+
+
+
+#if __name__ == "__main__":
+#migration
+#manager.run()
+#db.create_all()
+#db.session.commit()
