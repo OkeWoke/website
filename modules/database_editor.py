@@ -64,10 +64,9 @@ class Blog():
         self.db.session.add(new_entry)
         self.db.session.commit()      
 
-    def edit(self, id_num, title, date, post_body):
+    def edit(self, id_num, title, post_body):
         entry = self.table.query.filter_by(id=id_num).first() 
         entry.title = str(title)
-        entry.post_date = date
         entry.post_body = post_body
         self.db.session.commit()
 

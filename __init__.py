@@ -178,9 +178,8 @@ def galleryEntry(id_num):
 @auth.login_required
 def blogEdit(id_num):
     if request.method == 'GET':
-        print('got')
         entry = BlogTable.query.filter_by(id=id_num).first()
-        return htmlResp(render_template('editBlog.html', title = entry.title, post_body = entry.post_body))
+        return htmlResp(render_template('editBlog.html', id=id_num, title = entry.title, post_body = entry.post_body))
     
     elif request.method == 'POST':
         args = request.form
