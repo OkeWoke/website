@@ -2,8 +2,9 @@ from flask import Flask, jsonify,Response,url_for, send_from_directory, render_t
 from flask_restful import Api, Resource, reqparse
 from flask_httpauth import HTTPBasicAuth
 
-from flaskSite.modules.database import GalleryTable, db
+from flaskSite.modules.database import GalleryTable, BlogTable, db
 from flaskSite.modules.database_editor import Gallery as galDBE
+from flaskSite.modules.database_editor import Blog as blogDBE
 
 from PIL import Image
 from datetime import date
@@ -25,6 +26,7 @@ api = Api(app)
 auth = HTTPBasicAuth()
 db.init_app(app)
 dbe = galDBE(db)
+blogdbe = blogDBE(db)
 
 class GalleryAPI(Resource):
     def get(self):
@@ -171,7 +173,59 @@ def galleryEntry(id_num):
     entry = GalleryTable.query.filter_by(id=id_num).first()        
     html_content= render_template('post.html', title=entry.title, dat_cre=entry.acquired_date, dat_pos=entry.post_date, img_url =entry.img_uri,description=entry.description, acq_description=entry.acquisition_desc,pro_description=entry.processing_desc)
     return htmlResp(html_content)
+
+@app.route('/blogEdit/<int:id_num>', methods = ['GET', 'POST'])
+@auth.login_required
+def blogEdit(id_num):
+    if request.method == 'GET':
+        print('got')
+        entry = BlogTable.query.filter_by(id=id_num).first()
+        return htmlResp(render_template('editBlog.html', title = entry.title, post_body = entry.post_body))
     
+    elif request.method == 'POST':
+        args = request.form
+        title = args.get('title')
+        post_body = args.get('post_body')
+
+        #add validation?
+        print('DOING THING')
+        blogdbe.edit(id_num, title, post_body)
+        valid = "Success!"
+
+        return htmlResp(render_template('editBlog.html', id=id_num, title=title, post_body=post_body, status=valid))
+
+@app.route('/blogAdd', methods=['GET', 'POST'])
+@auth.login_required
+def blogAdd():
+    if request.method == 'GET':
+        return htmlResp(render_template('addBlog.html'))
+    elif request.method == 'POST':
+        args = request.form
+        title = args.get('title')
+        post_body = args.get('post_body')
+        #todo add validation?
+        blogdbe.insert(title, post_body)
+        valid = "Success!"
+
+        return htmlResp(render_template('addBlog.html', status=valid))
+
+@app.route('/blog/<int:id_num>')
+def blogEntry(id_num):
+    entry = BlogTable.query.filter_by(id=id_num).first()
+    html_content = render_template('blogPost.html', title=entry.title, date_pos = entry.post_date, post_body=entry.post_body)
+    return htmlResp(html_content)
+
+@app.route('/blog')
+def blogGet():
+    html_content = "<div class='blog'><ul>"
+    blog_entries = BlogTable.query.all()[::-1]
+    for entry in blog_entries:
+        id = entry.id
+        title = entry.title
+        html_content+="<a href='/blog/"+str(id)+"'>"+title+"</a></li>"
+    html_content+="</div>"
+    return htmlResp(html_content)
+
 @app.route('/about')       
 def about():
     html_content= render_template('about.html')

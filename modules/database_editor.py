@@ -1,12 +1,12 @@
-#from flaskSite.modules.database import GalleryTable, BlogTable
-from database import GalleryTable, BlogTable, db
+from flaskSite.modules.database import GalleryTable, BlogTable
+#from database import GalleryTable, BlogTable, db
 from datetime import date
 
-class DbEditor():
+class Gallery():
     
-    def __init__(self, db, table):
+    def __init__(self, db):
         self.db = db
-        self.table = table
+        self.table = GalleryTable
 
     def printing(self):
         for entry in self.table.query.all():
@@ -44,9 +44,9 @@ class DbEditor():
 
 class Blog():
     
-    def __init__(self, db, table):
+    def __init__(self, db):
         self.db = db
-        self.table = table
+        self.table = BlogTable
      
     def printing(self):
         for entry in self.table.query.all():
@@ -79,5 +79,5 @@ class Blog():
 if __name__ == "__main__":
    g = Blog(db, BlogTable)
    g.printing()
-   g.insert("dddddddd","dsdasdfhsduiohfds dsfdsfg")
+   g.insert("dddddddd","dsdasdfhsduddiohfds dsfdsfg")
    g.printing()
