@@ -2,10 +2,10 @@
     Adding blog post form!
     
     <form action="/blogAdd" method="post" enctype="multipart/form-data">
-        Title: <input type="text" name="title"><br>
+        Title: <input type="text" name="{{title}}"><br>
         Post Body<br>
-        <textarea name="post_body" rows="10" cols="30"></textarea><br>
+        <textarea name="post_body" rows="10" cols="30">{{post_body}}</textarea><br>
         <input type="submit" value="Submit"><br>
-        {{status}}
+        {{status|safe}}
     </form>
 </center>

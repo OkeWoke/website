@@ -9,7 +9,7 @@ from flaskSite.modules.database_editor import Blog as blogDBE
 from PIL import Image
 from datetime import date
 import Utility as util
-import os, math, werkzeug, imghdr, re, json
+import os, math, werkzeug, imghdr, re, json, markdown
 
 try:
     with open('config.json','r') as config_file:
@@ -49,10 +49,13 @@ def add_header(response):
     response.cache_control.max_age = 0
     return response 
     
-def handleImg(title, img):
+def handleImg(img, title=""):
     """Handles saving image, takes title string and img object, returns true and urls or false and error string"""
-    direc = config_data['directory']#"/var/www/flaskSite/flaskSite/" 
-    filename = title+"-"+img.filename
+    direc = config_data['directory']#"/var/www/flaskSite/flaskSite/"
+    if title !="": 
+        filename = title+"-"+img.filename
+    else:
+        filename = img.filename
     img.save(direc+"static/gallery/"+filename)
     if imghdr.what(direc+'static/gallery/'+filename) =='jpeg':
                
@@ -101,7 +104,7 @@ def addImg():
        
         
         if type(valid) != str:
-            handle = handleImg(title, img)
+            handle = handleImg(img, title=title)
             acq_dat = util.dateFormat(acq_dat)
             if handle[0]:
                 dbe.insert(title,acq_dat,handle[1],handle[2],desc,acq_desc,pro_desc)
@@ -143,7 +146,7 @@ def editImg(id_num):
         if type(valid) != str:
             acq_dat = util.dateFormat(acq_dat)
             if img != None and img.filename!="":
-                handle = handleImg(title, img)
+                handle = handleImg(img, title=title)
                 
                 if handle[0]:
                     dbe.edit(id_num, title, acq_dat,desc,acq_desc, pro_desc, handle[1], handle[2])
@@ -202,16 +205,42 @@ def blogAdd():
         args = request.form
         title = args.get('title')
         post_body = args.get('post_body')
+       
+        img_indices = [(m.start()+9, m.end()-1) for m in re.finditer('img src="[\S^"]+"', post_body)]
+        status = ""
+      
+        for indice_pair in img_indices:
+            (s, e) = indice_pair
+            s, e = int(s), int(e)
+            img_src = post_body[s:e].split("/")[-1] # strip any possible folder structure.
+            
+            direc = config_data['directory']+"static/gallery/"
+            if img_src in os.listdir(direc):
+                post_body = post_body[:s] + direc + img_src + post_body[e:]
+            else:
+                img = request.files.get(img_src)
+                if img is not None:
+                    handle = handleImg(img) # bool, url, t_url?
+                    post_body = post_body[:s] + handle[1] + post_body[e:]
+                else:
+                   
+                    status = status + '{0} <input type="file" name="{1}" accept="image/*"><br>'.format(img_src, img_src)
         #todo add validation?
-        blogdbe.insert(title, post_body)
-        valid = "Success!"
-
-        return htmlResp(render_template('addBlog.html', status=valid))
+        
+        if status=="":
+            blogdbe.insert(title, post_body)
+            status="Success!"
+            return htmlResp(render_template('addBlog.html', status=status))
+        else:
+            return htmlResp(render_template('addBlog.html', title=title, post_body=post_body, status=status))
 
 @app.route('/blog/<int:id_num>')
 def blogEntry(id_num):
     entry = BlogTable.query.filter_by(id=id_num).first()
-    html_content = render_template('blogPost.html', title=entry.title, date_pos = entry.post_date, post_body=entry.post_body)
+    html_post_body = markdown.markdown(entry.post_body)
+
+        
+    html_content = render_template('blogPost.html', title=entry.title, date_pos = entry.post_date, post_body=html_post_body)
     return htmlResp(html_content)
 
 @app.route('/blog')
