@@ -221,8 +221,8 @@ def blogGet():
     for entry in blog_entries:
         id = entry.id
         title = entry.title
-        html_content+="<a href='/blog/"+str(id)+"'>"+title+"</a></li>"
-    html_content+="</div>"
+        html_content+="<li><a href='/blog/"+str(id)+"'>"+title+"</a><br>"+str(entry.post_date)+"</li><hr>"
+    html_content+="</ul></div>"
     return htmlResp(html_content)
 
 @app.route('/about')       
