@@ -199,38 +199,40 @@ def blogEdit(id_num):
 @app.route('/blogAdd', methods=['GET', 'POST'])
 @auth.login_required
 def blogAdd():
+    
     if request.method == 'GET':
         return htmlResp(render_template('addBlog.html'))
     elif request.method == 'POST':
+        f = open("debugnew.txt", "a+")
+               
         args = request.form
         title = args.get('title')
         post_body = args.get('post_body')
        
         img_indices = [(m.start()+9, m.end()-1) for m in re.finditer('img src="[\S^"]+"', post_body)]
+        f.write("\n\n\n########\nPOST: title: {0}, post_body: #{1}#, img names detected: {2}\n\n\n".format(title, post_body, str([post_body[int(s):int(e)] for (s,e) in img_indices])))
         status = ""
-      
-        for indice_pair in img_indices:
-            (s, e) = indice_pair
-            s, e = int(s), int(e)
-            img_src = post_body[s:e].split("/")[-1] # strip any possible folder structure.
-            
-            direc = config_data['directory']+"static/gallery/"
-            if img_src in os.listdir(direc):
-                post_body = post_body[:s] + direc + img_src + post_body[e:]
-            else:
-                img = request.files.get(img_src)
-                if img is not None:
-                    handle = handleImg(img) # bool, url, t_url?
-                    post_body = post_body[:s] + handle[1] + post_body[e:]
-                else:
-                   
-                    status = status + '{0} <input type="file" name="{1}" accept="image/*"><br>'.format(img_src, img_src)
-        #todo add validation?
-        
+        if len(img_indices) > 0: #If there are img tags found in the post body...
+            f.write("Found img tags in body\n")
+            for indice_pair in img_indices:
+                (s, e) = indice_pair
+                s, e = int(s), int(e)
+                raw_img_string = post_body[s:e]
+                f.write("Looking for img attached: {0}\n".format(raw_img_string))
+                img = request.files.get(raw_img_string)
+                if img is None: # No Image Attached
+                    if "static/gallery/" not in raw_img_string: #not pre-existing img
+                        status+='{0} <input type="file" name="{1}" accept="image/*"><br>\n'.format(raw_img_string, raw_img_string)
+                else: # We found an attached image!
+                    f.write("{0} was attached!\n".format(raw_img_string))
+                    handle = handleImg(img) # bool, url, t_url
+                    f.write("Img Handle Status: {0}\n".format(handle[0]))
+                    if handle[0]:
+                        post_body = post_body[:s] + handle[1] + post_body[e:]
+
         if status=="":
             blogdbe.insert(title, post_body)
-            status="Success!"
-            return htmlResp(render_template('addBlog.html', status=status))
+            return htmlResp(render_template('addBlog.html', status="Success!"))
         else:
             return htmlResp(render_template('addBlog.html', title=title, post_body=post_body, status=status))
 
