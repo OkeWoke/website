@@ -188,13 +188,36 @@ def blogEdit(id_num):
         args = request.form
         title = args.get('title')
         post_body = args.get('post_body')
+        f = open("debugnew.txt", "a+")
+        img_indices = [(m.start()+9, m.end()-1) for m in re.finditer('img src="[\S^"]+"', post_body)]
+        f.write("\n\n\n########\nPOST: title: {0}, post_body: #{1}#, img names detected: {2}\n\n\n".format(title, post_body, str([post_body[int(s):int(e)] for (s,e) in img_indices])))
+        status = ""
+        if len(img_indices) > 0: #If there are img tags found in the post body...
+            f.write("Found img tags in body\n")
+            offset = 0
+            for indice_pair in img_indices:
+                (s, e) = indice_pair
+                s, e = int(s)+offset, int(e)+offset
+                raw_img_string = post_body[s:e]
+                f.write("Looking for img attached: {0}\n".format(raw_img_string))
+                img = request.files.get(raw_img_string)
+                if img is None: # No Image Attached
+                    if "static/gallery/" not in raw_img_string: #not pre-existing img
+                        status+='{0} <input type="file" name="{1}" accept="image/*"><br>\n'.format(raw_img_string, raw_img_string)
+                else: # We found an attached image!
+                    f.write("{0} was attached!\n".format(raw_img_string))
+                    handle = handleImg(img) # bool, url, t_url
+                    f.write("Img Handle Status: {0}\n".format(handle[0]))
+                    if handle[0]:
+                        post_body = post_body[:s] + handle[1] + post_body[e:]
+                        offset+=(len(handle[1])-len(raw_img_string))
 
-        #add validation?
-        print('DOING THING')
-        blogdbe.edit(id_num, title, post_body)
-        valid = "Success!"
+        if status=="":
+            blogdbe.edit(id_num, title, post_body)
+            return htmlResp(render_template('editBlog.html', status="Success!"))
+        else:
+            return htmlResp(render_template('editBlog.html',  id=id_num, title=title, post_body=post_body, status=status))
 
-        return htmlResp(render_template('editBlog.html', id=id_num, title=title, post_body=post_body, status=valid))
 
 @app.route('/blogAdd', methods=['GET', 'POST'])
 @auth.login_required
@@ -214,9 +237,10 @@ def blogAdd():
         status = ""
         if len(img_indices) > 0: #If there are img tags found in the post body...
             f.write("Found img tags in body\n")
+            offset = 0
             for indice_pair in img_indices:
                 (s, e) = indice_pair
-                s, e = int(s), int(e)
+                s, e = int(s)+offset, int(e)+offset
                 raw_img_string = post_body[s:e]
                 f.write("Looking for img attached: {0}\n".format(raw_img_string))
                 img = request.files.get(raw_img_string)
@@ -229,6 +253,7 @@ def blogAdd():
                     f.write("Img Handle Status: {0}\n".format(handle[0]))
                     if handle[0]:
                         post_body = post_body[:s] + handle[1] + post_body[e:]
+                        offset+=(len(handle[1])-len(raw_img_string))
 
         if status=="":
             blogdbe.insert(title, post_body)
