@@ -1,0 +1,12 @@
+<center>
+    Editing blog post form!
+    
+    <form action="/blogEdit/{{id}}" method="post" enctype="multipart/form-data">
+        Title: <input type="text" name="title" value="{{title}}"><br>
+        post body<br>
+        <textarea name="post_body" rows="10" cols="30">{{post_body}}</textarea><br>
+
+        <input type="submit" value="Submit"><br>
+        {{status|safe}}
+    </form>
+</center>

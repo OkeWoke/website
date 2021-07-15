@@ -1,0 +1,380 @@
+
+
+
+########
+POST: title: Misconceptions & Discussion on Resolution of One Shot Colour v.s. Monochromatic Cameras, post_body: ### Preface
+Are you choosing a camera to use for astrophotography and can’t decide between all the options? One of the important factors to decide is choosing a one shot colour or a monochromatic camera.
+
+OSC (One Shot Colour) cameras are typically much cheaper compared to their mono (monochromatic) equivalents, this is presumably due to the higher demand of OSC sensors in the general consumer market of cameras. Additionally with mono cameras there is the added expense of filters, you’d require at the minimum 3 filters and a filter wheel to be able to achieve a similar RGB image. Price is one key consideration, however this article will focus on technical differences in the quality of data attainable.
+
+## What exactly makes a sensor a one shot colour
+
+<img src="/static/gallery/bayer_1.jpg">
+Image by Cburnett / CC BY-SA
+
+An OSC sensor is basically a normal mono sensor but with CFA (Colour Filter Array) superimposed in front of it. One CFA we all know and love is the bayer matrix which has a pattern of size 2×2 containing two green, one red and one blue pixel. (as shown below) There are other CFAs out there with much more complicated designs such as the Fujifilm X-Trans CFA often found in Fuji’s consumer cameras. However most astro cameras available with a CFA use the bayer pattern so we will be discussing under the assumption our OSC camera has a bayer matrix.
+
+<img src="/static/gallery/bayer_2.jpg">
+Image by Cburnett / CC BY-SA
+
+So for a given mono sensor with this CFA applied on top of it, each pixel gets filtered with a specific colour. All up, 25% of the pixels are red, 50% are green and the remaining 25% are blue.
+
+OSC doesn’t collect as many photons that means worse SNR (Signal to Noise Ratio) right?
+NO! In actuality the image signal or intensity is about the same as one taken with a mono sensor. If we ignore QE (Quantum Efficiency) and responsivity for a second and assume perfect filtering with the CFA such that a given photon can only transmit through one of the three colour filters. Then only 50% of the ‘green’ photons incident on the sensor will actually transmit, reach a pixel and generate signal, the same for red and blue with 25% each. In reality the QE varies with wavelength, typically peaking in the green wavelengths.
+
+The CFA is also not perfect and will have transmission losses, this is shown below in the responsivity curve for an ZWO ASI 224MC. It is also important to note is the overlap present in some regions of the spectrum. This means a given photon incident on a sensor may possibly transmit and reach a pixel through more than just one of the three colours. In the case of a 575nm photon it could potentially transmit through the green and red filter. For this particular camera there is also the NIR region 800nm+ where photons can transmit approximately equally through any of the three filters.
+
+
+<img src="zwo.jpg">
+Image by ZWO.
+
+In short, yes, a major fraction of incident photons on a OSC sensor will not generate signal compared to one without a CFA. However it is not exactly the 25/25/50% split for RGB that is commonly quoted around, and it will vary from camera to camera. Now a major misconception that bases itself from this fact is that ‘OSC cameras produce much lower SNR images’, this is only a slight truth with regards to the transmission losses which are usually on the order of 5-10%, but ignoring that there is negligible difference.
+
+For example lets assume we’re imaging with an Ha filter in front of our OSC camera and in front of our mono camera, and lets assume no overlap in the responsivity such that the Ha wavelength photons only transmit through the red pixels on our OSC camera. This means only 25% of sensor is indeed receiving signal when compared to the mono, however the signal of the red pixel will be same as one on the mono (ignoring minor transmission losses) and thus have the same SNR. Doesn’t this mean 3/4th our sensor will just lack signal? Yes, it is at this point where demosaicing (or in the case of a bayer filter, debayering) comes in. This will interpolate values for pixels between the pixels that did receive signal.
+
+<img src="/static/gallery/bayer_2.jpg">
+Modified Cburnett image/ CC BY-SA
+
+
+## Demosaicing and the real issue with OSC
+
+The interpolation between these values is generally referred to as demosaicing an image. There are many different algorithms possible that can achieve this interpolation. A simple method is bilinear interpolation. For example a green pixel needs a blue and red value interpolated, the blue value can be taken to be the average of the nearest 4, and the same with red. In the case our previous Hydrogen Alpha filtered example, each blank pixel will take on the value of an average of the nearest 4 red pixels.
+
+There are many more complicated means of interpolation available too, one such that is implemented in PixInsight is Variable Number of Gradients (VNG) which uses gradients in local regions to compute an estimate. VNG’s effectiveness would most likely be reduced in the case of our Ha example with little to no information contained in the blue or green pixels, possibly integrating the noise from these pixels reducing the overall SNR, and so a bilinear method may prove better. Another alternative is superpixel, in which case you effectively ‘delete’ the blank pixels and reduce your resolution to 1/4th the original. It is clearly the case that we have much less spatial information with OSC, especially when using an Ha filter. You can interpret it as sampling an image with lower frequency, as such we should expect an OSC exposure to lack high frequency information.
+
+The below Ha narrowband images are an example taken with the exact same equipment, settings and sensors (except for the CFA). The top left is mono and the rest are with an OSC displaying different the results of different debayering algorithms. All debayered images had the red channel extracted.
+
+<img src="/static/gallery/frito.jpg">
+Images taken by Frito
+
+These images clearly show that mono has superior resolution and high frequency details are lost in the OSC exposure. The interpolation quality can vary, with VNG giving quite smooth results and bilinear giving harsher edges. However the interpolated pixels are just guesses and are no true substitute for the real information that could be acquired in a mono.
+
+Quantifying this is non trivial and it will vary from sensor to sensor with manufacturing tolerances and how different CFAs are made. We can quantify resolution by looking at and comparing the MTF (Modulation Transfer Curve) curves of an OSC and mono sensor. Below are some images from maxmax.com showing the MTF curves from a Canon30D, the left shows the MTF of mono sensor and the right with the bayer matrix. The first row is the measurement done with white light, the following rows are with green, blue and red light. In general, you can see that the contrast drops off dramatically to near zero at the higher frequencies for the bayered sensor. This compliments what we have observed previously with actual astrophotography data.
+
+<img src="/static/gallery/mtf.jpg">
+Image by LDP LLC www.MaxMax.com.
+
+
+## What about dithering and drizzle?
+
+All the discussion above has been about individual single exposures, however when it comes to producing an image we have many tools up our sleeves, one of which is bayer (or CFA) drizzle. If data taken with an OSC camera is dithered, using the bayer drizzle method you can effectively reconstruct the image with the raw pixel data without any interpolation. To what extent you can reproduce the lost high frequencies I am unsure as I do not have access to sufficient datasets to make an evidence based claim. However it could also be argued that a drizzle integration can also be performed on a mono dataset and also further improve high frequency resolution and most likely with much less reduction in SNR. Note that in both cases, drizzle is only applicable when under sampling.
+
+## Further Considerations
+
+### Colour Reproduction
+
+Noted before the CFA responsivity curve shows overlap between regions of R,G & B. This will vary from sensor to sensor, and more importantly RGB filters used with mono cameras. RGB filters typically have a square cutoff transmission curve with no overlap. Because of this colour reproduction can vary quite a bit, and can make an impact when considering light pollution.
+
+### Total integration time comparison
+
+I’ve purposefully shied away from this topic, it is complicated. The common belief is that mono will reach a desired SNR via the acquisition of LRGB data faster than OSC.
+It is further complicated by the degrees of freedom when it comes to LRGB. The ratio between L and RGB, taking just RGB and synthesizing L, creating a super luminance with all LRGB masters etc. In theory L is much more efficient at achieving a desired SNR compared to OSC as each pixel receives any visible wavelength of photon, and this L will have superior high frequency detail. Quantification of this efficiency would require accurate QE and responsivity curves for the relevant integrals and thus will vary sensor to sensor.
+
+## Conclusion
+
+Hopefully it is now clear that OSC are not automatically inferior to mono due to less photons generating signal, and that there is most definitely not a major 50% or 75% loss in SNR. There is a slight reduction in SNR due to transmission losses through the CFA. A major pitfall of OSC is the loss of high frequency information for a given exposure, especially with narrowband data.
+
+## Further reading
+
+Here are a few articles worth reading for more information on some of the specific things mentioned here:
+
+- Modulation Transfer Function (MTF), Edmund Optics: https://www.edmundoptics.com/knowledge-center/application-notes/optics/introduction-to-modulation-transfer-function/
+- Debayer Study, maxmax.com : https://maxmax.com/maincamerapage/monochrome-cameras/debayer-study
+- Drizzle Paper, Fruchter & Hook 2001 : https://arxiv.org/pdf/astro-ph/9808087.pdf
+
+Thanks to Frito for supplying the asi1600mc and asi1600mm subs.#, img names detected: ['/static/gallery/bayer_1.jpg', '/static/gallery/bayer_2.jpg', 'zwo.jpg', '/static/gallery/bayer_2.jpg', '/static/gallery/frito.jpg', '/static/gallery/mtf.jpg']
+
+
+Found img tags in body
+Looking for img attached: /static/gallery/bayer_1.jpg
+Looking for img attached: /static/gallery/bayer_2.jpg
+Looking for img attached: zwo.jpg
+Looking for img attached: /static/gallery/bayer_2.jpg
+Looking for img attached: /static/gallery/frito.jpg
+Looking for img attached: /static/gallery/mtf.jpg
+
+
+
+########
+POST: title: Misconceptions & Discussion on Resolution of One Shot Colour v.s. Monochromatic Cameras, post_body: ### Preface
+Are you choosing a camera to use for astrophotography and can’t decide between all the options? One of the important factors to decide is choosing a one shot colour or a monochromatic camera.
+
+OSC (One Shot Colour) cameras are typically much cheaper compared to their mono (monochromatic) equivalents, this is presumably due to the higher demand of OSC sensors in the general consumer market of cameras. Additionally with mono cameras there is the added expense of filters, you’d require at the minimum 3 filters and a filter wheel to be able to achieve a similar RGB image. Price is one key consideration, however this article will focus on technical differences in the quality of data attainable.
+
+## What exactly makes a sensor a one shot colour
+
+<img src="/static/gallery/bayer_1.jpg">
+Image by Cburnett / CC BY-SA
+
+An OSC sensor is basically a normal mono sensor but with CFA (Colour Filter Array) superimposed in front of it. One CFA we all know and love is the bayer matrix which has a pattern of size 2×2 containing two green, one red and one blue pixel. (as shown below) There are other CFAs out there with much more complicated designs such as the Fujifilm X-Trans CFA often found in Fuji’s consumer cameras. However most astro cameras available with a CFA use the bayer pattern so we will be discussing under the assumption our OSC camera has a bayer matrix.
+
+<img src="/static/gallery/bayer_2.jpg">
+Image by Cburnett / CC BY-SA
+
+So for a given mono sensor with this CFA applied on top of it, each pixel gets filtered with a specific colour. All up, 25% of the pixels are red, 50% are green and the remaining 25% are blue.
+
+OSC doesn’t collect as many photons that means worse SNR (Signal to Noise Ratio) right?
+NO! In actuality the image signal or intensity is about the same as one taken with a mono sensor. If we ignore QE (Quantum Efficiency) and responsivity for a second and assume perfect filtering with the CFA such that a given photon can only transmit through one of the three colour filters. Then only 50% of the ‘green’ photons incident on the sensor will actually transmit, reach a pixel and generate signal, the same for red and blue with 25% each. In reality the QE varies with wavelength, typically peaking in the green wavelengths.
+
+The CFA is also not perfect and will have transmission losses, this is shown below in the responsivity curve for an ZWO ASI 224MC. It is also important to note is the overlap present in some regions of the spectrum. This means a given photon incident on a sensor may possibly transmit and reach a pixel through more than just one of the three colours. In the case of a 575nm photon it could potentially transmit through the green and red filter. For this particular camera there is also the NIR region 800nm+ where photons can transmit approximately equally through any of the three filters.
+
+
+<img src="zwo.jpg">
+Image by ZWO.
+
+In short, yes, a major fraction of incident photons on a OSC sensor will not generate signal compared to one without a CFA. However it is not exactly the 25/25/50% split for RGB that is commonly quoted around, and it will vary from camera to camera. Now a major misconception that bases itself from this fact is that ‘OSC cameras produce much lower SNR images’, this is only a slight truth with regards to the transmission losses which are usually on the order of 5-10%, but ignoring that there is negligible difference.
+
+For example lets assume we’re imaging with an Ha filter in front of our OSC camera and in front of our mono camera, and lets assume no overlap in the responsivity such that the Ha wavelength photons only transmit through the red pixels on our OSC camera. This means only 25% of sensor is indeed receiving signal when compared to the mono, however the signal of the red pixel will be same as one on the mono (ignoring minor transmission losses) and thus have the same SNR. Doesn’t this mean 3/4th our sensor will just lack signal? Yes, it is at this point where demosaicing (or in the case of a bayer filter, debayering) comes in. This will interpolate values for pixels between the pixels that did receive signal.
+
+<img src="/static/gallery/bayer_2.jpg">
+Modified Cburnett image/ CC BY-SA
+
+
+## Demosaicing and the real issue with OSC
+
+The interpolation between these values is generally referred to as demosaicing an image. There are many different algorithms possible that can achieve this interpolation. A simple method is bilinear interpolation. For example a green pixel needs a blue and red value interpolated, the blue value can be taken to be the average of the nearest 4, and the same with red. In the case our previous Hydrogen Alpha filtered example, each blank pixel will take on the value of an average of the nearest 4 red pixels.
+
+There are many more complicated means of interpolation available too, one such that is implemented in PixInsight is Variable Number of Gradients (VNG) which uses gradients in local regions to compute an estimate. VNG’s effectiveness would most likely be reduced in the case of our Ha example with little to no information contained in the blue or green pixels, possibly integrating the noise from these pixels reducing the overall SNR, and so a bilinear method may prove better. Another alternative is superpixel, in which case you effectively ‘delete’ the blank pixels and reduce your resolution to 1/4th the original. It is clearly the case that we have much less spatial information with OSC, especially when using an Ha filter. You can interpret it as sampling an image with lower frequency, as such we should expect an OSC exposure to lack high frequency information.
+
+The below Ha narrowband images are an example taken with the exact same equipment, settings and sensors (except for the CFA). The top left is mono and the rest are with an OSC displaying different the results of different debayering algorithms. All debayered images had the red channel extracted.
+
+<img src="/static/gallery/frito.jpg">
+Images taken by Frito
+
+These images clearly show that mono has superior resolution and high frequency details are lost in the OSC exposure. The interpolation quality can vary, with VNG giving quite smooth results and bilinear giving harsher edges. However the interpolated pixels are just guesses and are no true substitute for the real information that could be acquired in a mono.
+
+Quantifying this is non trivial and it will vary from sensor to sensor with manufacturing tolerances and how different CFAs are made. We can quantify resolution by looking at and comparing the MTF (Modulation Transfer Curve) curves of an OSC and mono sensor. Below are some images from maxmax.com showing the MTF curves from a Canon30D, the left shows the MTF of mono sensor and the right with the bayer matrix. The first row is the measurement done with white light, the following rows are with green, blue and red light. In general, you can see that the contrast drops off dramatically to near zero at the higher frequencies for the bayered sensor. This compliments what we have observed previously with actual astrophotography data.
+
+<img src="/static/gallery/mtf.jpg">
+Image by LDP LLC www.MaxMax.com.
+
+
+## What about dithering and drizzle?
+
+All the discussion above has been about individual single exposures, however when it comes to producing an image we have many tools up our sleeves, one of which is bayer (or CFA) drizzle. If data taken with an OSC camera is dithered, using the bayer drizzle method you can effectively reconstruct the image with the raw pixel data without any interpolation. To what extent you can reproduce the lost high frequencies I am unsure as I do not have access to sufficient datasets to make an evidence based claim. However it could also be argued that a drizzle integration can also be performed on a mono dataset and also further improve high frequency resolution and most likely with much less reduction in SNR. Note that in both cases, drizzle is only applicable when under sampling.
+
+## Further Considerations
+
+### Colour Reproduction
+
+Noted before the CFA responsivity curve shows overlap between regions of R,G & B. This will vary from sensor to sensor, and more importantly RGB filters used with mono cameras. RGB filters typically have a square cutoff transmission curve with no overlap. Because of this colour reproduction can vary quite a bit, and can make an impact when considering light pollution.
+
+### Total integration time comparison
+
+I’ve purposefully shied away from this topic, it is complicated. The common belief is that mono will reach a desired SNR via the acquisition of LRGB data faster than OSC.
+It is further complicated by the degrees of freedom when it comes to LRGB. The ratio between L and RGB, taking just RGB and synthesizing L, creating a super luminance with all LRGB masters etc. In theory L is much more efficient at achieving a desired SNR compared to OSC as each pixel receives any visible wavelength of photon, and this L will have superior high frequency detail. Quantification of this efficiency would require accurate QE and responsivity curves for the relevant integrals and thus will vary sensor to sensor.
+
+## Conclusion
+
+Hopefully it is now clear that OSC are not automatically inferior to mono due to less photons generating signal, and that there is most definitely not a major 50% or 75% loss in SNR. There is a slight reduction in SNR due to transmission losses through the CFA. A major pitfall of OSC is the loss of high frequency information for a given exposure, especially with narrowband data.
+
+## Further reading
+
+Here are a few articles worth reading for more information on some of the specific things mentioned here:
+
+- Modulation Transfer Function (MTF), Edmund Optics: https://www.edmundoptics.com/knowledge-center/application-notes/optics/introduction-to-modulation-transfer-function/
+- Debayer Study, maxmax.com : https://maxmax.com/maincamerapage/monochrome-cameras/debayer-study
+- Drizzle Paper, Fruchter & Hook 2001 : https://arxiv.org/pdf/astro-ph/9808087.pdf
+
+Thanks to Frito for supplying the asi1600mc and asi1600mm subs.#, img names detected: ['/static/gallery/bayer_1.jpg', '/static/gallery/bayer_2.jpg', 'zwo.jpg', '/static/gallery/bayer_2.jpg', '/static/gallery/frito.jpg', '/static/gallery/mtf.jpg']
+
+
+Found img tags in body
+Looking for img attached: /static/gallery/bayer_1.jpg
+Looking for img attached: /static/gallery/bayer_2.jpg
+Looking for img attached: zwo.jpg
+zwo.jpg was attached!
+Img Handle Status: True
+Looking for img attached: /static/gallery/bayer_2.jpg
+Looking for img attached: /static/gallery/frito.jpg
+Looking for img attached: /static/gallery/mtf.jpg
+
+
+
+########
+POST: title: Misconceptions & Discussion on Resolution of One Shot Colour v.s. Monochromatic Cameras, post_body: ### Preface
+Are you choosing a camera to use for astrophotography and can’t decide between all the options? One of the important factors to decide is choosing a one shot colour or a monochromatic camera.
+
+OSC (One Shot Colour) cameras are typically much cheaper compared to their mono (monochromatic) equivalents, this is presumably due to the higher demand of OSC sensors in the general consumer market of cameras. Additionally with mono cameras there is the added expense of filters, you’d require at the minimum 3 filters and a filter wheel to be able to achieve a similar RGB image. Price is one key consideration, however this article will focus on technical differences in the quality of data attainable.
+
+## What exactly makes a sensor a one shot colour
+
+<img src="/static/gallery/bayer_1.jpg">
+Image by Cburnett / CC BY-SA
+
+An OSC sensor is basically a normal mono sensor but with CFA (Colour Filter Array) superimposed in front of it. One CFA we all know and love is the bayer matrix which has a pattern of size 2×2 containing two green, one red and one blue pixel. (as shown below) There are other CFAs out there with much more complicated designs such as the Fujifilm X-Trans CFA often found in Fuji’s consumer cameras. However most astro cameras available with a CFA use the bayer pattern so we will be discussing under the assumption our OSC camera has a bayer matrix.
+
+<img src="/static/gallery/bayer_2.jpg">
+Image by Cburnett / CC BY-SA
+
+So for a given mono sensor with this CFA applied on top of it, each pixel gets filtered with a specific colour. All up, 25% of the pixels are red, 50% are green and the remaining 25% are blue.
+
+OSC doesn’t collect as many photons that means worse SNR (Signal to Noise Ratio) right?
+NO! In actuality the image signal or intensity is about the same as one taken with a mono sensor. If we ignore QE (Quantum Efficiency) and responsivity for a second and assume perfect filtering with the CFA such that a given photon can only transmit through one of the three colour filters. Then only 50% of the ‘green’ photons incident on the sensor will actually transmit, reach a pixel and generate signal, the same for red and blue with 25% each. In reality the QE varies with wavelength, typically peaking in the green wavelengths.
+
+The CFA is also not perfect and will have transmission losses, this is shown below in the responsivity curve for an ZWO ASI 224MC. It is also important to note is the overlap present in some regions of the spectrum. This means a given photon incident on a sensor may possibly transmit and reach a pixel through more than just one of the three colours. In the case of a 575nm photon it could potentially transmit through the green and red filter. For this particular camera there is also the NIR region 800nm+ where photons can transmit approximately equally through any of the three filters.
+
+
+<img src="f.jpg">
+Image by ZWO.
+
+In short, yes, a major fraction of incident photons on a OSC sensor will not generate signal compared to one without a CFA. However it is not exactly the 25/25/50% split for RGB that is commonly quoted around, and it will vary from camera to camera. Now a major misconception that bases itself from this fact is that ‘OSC cameras produce much lower SNR images’, this is only a slight truth with regards to the transmission losses which are usually on the order of 5-10%, but ignoring that there is negligible difference.
+
+For example lets assume we’re imaging with an Ha filter in front of our OSC camera and in front of our mono camera, and lets assume no overlap in the responsivity such that the Ha wavelength photons only transmit through the red pixels on our OSC camera. This means only 25% of sensor is indeed receiving signal when compared to the mono, however the signal of the red pixel will be same as one on the mono (ignoring minor transmission losses) and thus have the same SNR. Doesn’t this mean 3/4th our sensor will just lack signal? Yes, it is at this point where demosaicing (or in the case of a bayer filter, debayering) comes in. This will interpolate values for pixels between the pixels that did receive signal.
+
+<img src="/static/gallery/bayer_2.jpg">
+Modified Cburnett image/ CC BY-SA
+
+
+## Demosaicing and the real issue with OSC
+
+The interpolation between these values is generally referred to as demosaicing an image. There are many different algorithms possible that can achieve this interpolation. A simple method is bilinear interpolation. For example a green pixel needs a blue and red value interpolated, the blue value can be taken to be the average of the nearest 4, and the same with red. In the case our previous Hydrogen Alpha filtered example, each blank pixel will take on the value of an average of the nearest 4 red pixels.
+
+There are many more complicated means of interpolation available too, one such that is implemented in PixInsight is Variable Number of Gradients (VNG) which uses gradients in local regions to compute an estimate. VNG’s effectiveness would most likely be reduced in the case of our Ha example with little to no information contained in the blue or green pixels, possibly integrating the noise from these pixels reducing the overall SNR, and so a bilinear method may prove better. Another alternative is superpixel, in which case you effectively ‘delete’ the blank pixels and reduce your resolution to 1/4th the original. It is clearly the case that we have much less spatial information with OSC, especially when using an Ha filter. You can interpret it as sampling an image with lower frequency, as such we should expect an OSC exposure to lack high frequency information.
+
+The below Ha narrowband images are an example taken with the exact same equipment, settings and sensors (except for the CFA). The top left is mono and the rest are with an OSC displaying different the results of different debayering algorithms. All debayered images had the red channel extracted.
+
+<img src="/static/gallery/frito.jpg">
+Images taken by Frito
+
+These images clearly show that mono has superior resolution and high frequency details are lost in the OSC exposure. The interpolation quality can vary, with VNG giving quite smooth results and bilinear giving harsher edges. However the interpolated pixels are just guesses and are no true substitute for the real information that could be acquired in a mono.
+
+Quantifying this is non trivial and it will vary from sensor to sensor with manufacturing tolerances and how different CFAs are made. We can quantify resolution by looking at and comparing the MTF (Modulation Transfer Curve) curves of an OSC and mono sensor. Below are some images from maxmax.com showing the MTF curves from a Canon30D, the left shows the MTF of mono sensor and the right with the bayer matrix. The first row is the measurement done with white light, the following rows are with green, blue and red light. In general, you can see that the contrast drops off dramatically to near zero at the higher frequencies for the bayered sensor. This compliments what we have observed previously with actual astrophotography data.
+
+<img src="/static/gallery/mtf.jpg">
+Image by LDP LLC www.MaxMax.com.
+
+
+## What about dithering and drizzle?
+
+All the discussion above has been about individual single exposures, however when it comes to producing an image we have many tools up our sleeves, one of which is bayer (or CFA) drizzle. If data taken with an OSC camera is dithered, using the bayer drizzle method you can effectively reconstruct the image with the raw pixel data without any interpolation. To what extent you can reproduce the lost high frequencies I am unsure as I do not have access to sufficient datasets to make an evidence based claim. However it could also be argued that a drizzle integration can also be performed on a mono dataset and also further improve high frequency resolution and most likely with much less reduction in SNR. Note that in both cases, drizzle is only applicable when under sampling.
+
+## Further Considerations
+
+### Colour Reproduction
+
+Noted before the CFA responsivity curve shows overlap between regions of R,G & B. This will vary from sensor to sensor, and more importantly RGB filters used with mono cameras. RGB filters typically have a square cutoff transmission curve with no overlap. Because of this colour reproduction can vary quite a bit, and can make an impact when considering light pollution.
+
+### Total integration time comparison
+
+I’ve purposefully shied away from this topic, it is complicated. The common belief is that mono will reach a desired SNR via the acquisition of LRGB data faster than OSC.
+It is further complicated by the degrees of freedom when it comes to LRGB. The ratio between L and RGB, taking just RGB and synthesizing L, creating a super luminance with all LRGB masters etc. In theory L is much more efficient at achieving a desired SNR compared to OSC as each pixel receives any visible wavelength of photon, and this L will have superior high frequency detail. Quantification of this efficiency would require accurate QE and responsivity curves for the relevant integrals and thus will vary sensor to sensor.
+
+## Conclusion
+
+Hopefully it is now clear that OSC are not automatically inferior to mono due to less photons generating signal, and that there is most definitely not a major 50% or 75% loss in SNR. There is a slight reduction in SNR due to transmission losses through the CFA. A major pitfall of OSC is the loss of high frequency information for a given exposure, especially with narrowband data.
+
+## Further reading
+
+Here are a few articles worth reading for more information on some of the specific things mentioned here:
+
+- Modulation Transfer Function (MTF), Edmund Optics: https://www.edmundoptics.com/knowledge-center/application-notes/optics/introduction-to-modulation-transfer-function/
+- Debayer Study, maxmax.com : https://maxmax.com/maincamerapage/monochrome-cameras/debayer-study
+- Drizzle Paper, Fruchter & Hook 2001 : https://arxiv.org/pdf/astro-ph/9808087.pdf
+
+Thanks to Frito for supplying the asi1600mc and asi1600mm subs.#, img names detected: ['/static/gallery/bayer_1.jpg', '/static/gallery/bayer_2.jpg', 'f.jpg', '/static/gallery/bayer_2.jpg', '/static/gallery/frito.jpg', '/static/gallery/mtf.jpg']
+
+
+Found img tags in body
+Looking for img attached: /static/gallery/bayer_1.jpg
+Looking for img attached: /static/gallery/bayer_2.jpg
+Looking for img attached: f.jpg
+Looking for img attached: /static/gallery/bayer_2.jpg
+Looking for img attached: /static/gallery/frito.jpg
+Looking for img attached: /static/gallery/mtf.jpg
+
+
+
+########
+POST: title: Misconceptions & Discussion on Resolution of One Shot Colour v.s. Monochromatic Cameras, post_body: ### Preface
+Are you choosing a camera to use for astrophotography and can’t decide between all the options? One of the important factors to decide is choosing a one shot colour or a monochromatic camera.
+
+OSC (One Shot Colour) cameras are typically much cheaper compared to their mono (monochromatic) equivalents, this is presumably due to the higher demand of OSC sensors in the general consumer market of cameras. Additionally with mono cameras there is the added expense of filters, you’d require at the minimum 3 filters and a filter wheel to be able to achieve a similar RGB image. Price is one key consideration, however this article will focus on technical differences in the quality of data attainable.
+
+## What exactly makes a sensor a one shot colour
+
+<img src="/static/gallery/bayer_1.jpg">
+Image by Cburnett / CC BY-SA
+
+An OSC sensor is basically a normal mono sensor but with CFA (Colour Filter Array) superimposed in front of it. One CFA we all know and love is the bayer matrix which has a pattern of size 2×2 containing two green, one red and one blue pixel. (as shown below) There are other CFAs out there with much more complicated designs such as the Fujifilm X-Trans CFA often found in Fuji’s consumer cameras. However most astro cameras available with a CFA use the bayer pattern so we will be discussing under the assumption our OSC camera has a bayer matrix.
+
+<img src="/static/gallery/bayer_2.jpg">
+Image by Cburnett / CC BY-SA
+
+So for a given mono sensor with this CFA applied on top of it, each pixel gets filtered with a specific colour. All up, 25% of the pixels are red, 50% are green and the remaining 25% are blue.
+
+OSC doesn’t collect as many photons that means worse SNR (Signal to Noise Ratio) right?
+NO! In actuality the image signal or intensity is about the same as one taken with a mono sensor. If we ignore QE (Quantum Efficiency) and responsivity for a second and assume perfect filtering with the CFA such that a given photon can only transmit through one of the three colour filters. Then only 50% of the ‘green’ photons incident on the sensor will actually transmit, reach a pixel and generate signal, the same for red and blue with 25% each. In reality the QE varies with wavelength, typically peaking in the green wavelengths.
+
+The CFA is also not perfect and will have transmission losses, this is shown below in the responsivity curve for an ZWO ASI 224MC. It is also important to note is the overlap present in some regions of the spectrum. This means a given photon incident on a sensor may possibly transmit and reach a pixel through more than just one of the three colours. In the case of a 575nm photon it could potentially transmit through the green and red filter. For this particular camera there is also the NIR region 800nm+ where photons can transmit approximately equally through any of the three filters.
+
+
+<img src="f.jpg">
+Image by ZWO.
+
+In short, yes, a major fraction of incident photons on a OSC sensor will not generate signal compared to one without a CFA. However it is not exactly the 25/25/50% split for RGB that is commonly quoted around, and it will vary from camera to camera. Now a major misconception that bases itself from this fact is that ‘OSC cameras produce much lower SNR images’, this is only a slight truth with regards to the transmission losses which are usually on the order of 5-10%, but ignoring that there is negligible difference.
+
+For example lets assume we’re imaging with an Ha filter in front of our OSC camera and in front of our mono camera, and lets assume no overlap in the responsivity such that the Ha wavelength photons only transmit through the red pixels on our OSC camera. This means only 25% of sensor is indeed receiving signal when compared to the mono, however the signal of the red pixel will be same as one on the mono (ignoring minor transmission losses) and thus have the same SNR. Doesn’t this mean 3/4th our sensor will just lack signal? Yes, it is at this point where demosaicing (or in the case of a bayer filter, debayering) comes in. This will interpolate values for pixels between the pixels that did receive signal.
+
+<img src="/static/gallery/bayer_2.jpg">
+Modified Cburnett image/ CC BY-SA
+
+
+## Demosaicing and the real issue with OSC
+
+The interpolation between these values is generally referred to as demosaicing an image. There are many different algorithms possible that can achieve this interpolation. A simple method is bilinear interpolation. For example a green pixel needs a blue and red value interpolated, the blue value can be taken to be the average of the nearest 4, and the same with red. In the case our previous Hydrogen Alpha filtered example, each blank pixel will take on the value of an average of the nearest 4 red pixels.
+
+There are many more complicated means of interpolation available too, one such that is implemented in PixInsight is Variable Number of Gradients (VNG) which uses gradients in local regions to compute an estimate. VNG’s effectiveness would most likely be reduced in the case of our Ha example with little to no information contained in the blue or green pixels, possibly integrating the noise from these pixels reducing the overall SNR, and so a bilinear method may prove better. Another alternative is superpixel, in which case you effectively ‘delete’ the blank pixels and reduce your resolution to 1/4th the original. It is clearly the case that we have much less spatial information with OSC, especially when using an Ha filter. You can interpret it as sampling an image with lower frequency, as such we should expect an OSC exposure to lack high frequency information.
+
+The below Ha narrowband images are an example taken with the exact same equipment, settings and sensors (except for the CFA). The top left is mono and the rest are with an OSC displaying different the results of different debayering algorithms. All debayered images had the red channel extracted.
+
+<img src="/static/gallery/frito.jpg">
+Images taken by Frito
+
+These images clearly show that mono has superior resolution and high frequency details are lost in the OSC exposure. The interpolation quality can vary, with VNG giving quite smooth results and bilinear giving harsher edges. However the interpolated pixels are just guesses and are no true substitute for the real information that could be acquired in a mono.
+
+Quantifying this is non trivial and it will vary from sensor to sensor with manufacturing tolerances and how different CFAs are made. We can quantify resolution by looking at and comparing the MTF (Modulation Transfer Curve) curves of an OSC and mono sensor. Below are some images from maxmax.com showing the MTF curves from a Canon30D, the left shows the MTF of mono sensor and the right with the bayer matrix. The first row is the measurement done with white light, the following rows are with green, blue and red light. In general, you can see that the contrast drops off dramatically to near zero at the higher frequencies for the bayered sensor. This compliments what we have observed previously with actual astrophotography data.
+
+<img src="/static/gallery/mtf.jpg">
+Image by LDP LLC www.MaxMax.com.
+
+
+## What about dithering and drizzle?
+
+All the discussion above has been about individual single exposures, however when it comes to producing an image we have many tools up our sleeves, one of which is bayer (or CFA) drizzle. If data taken with an OSC camera is dithered, using the bayer drizzle method you can effectively reconstruct the image with the raw pixel data without any interpolation. To what extent you can reproduce the lost high frequencies I am unsure as I do not have access to sufficient datasets to make an evidence based claim. However it could also be argued that a drizzle integration can also be performed on a mono dataset and also further improve high frequency resolution and most likely with much less reduction in SNR. Note that in both cases, drizzle is only applicable when under sampling.
+
+## Further Considerations
+
+### Colour Reproduction
+
+Noted before the CFA responsivity curve shows overlap between regions of R,G & B. This will vary from sensor to sensor, and more importantly RGB filters used with mono cameras. RGB filters typically have a square cutoff transmission curve with no overlap. Because of this colour reproduction can vary quite a bit, and can make an impact when considering light pollution.
+
+### Total integration time comparison
+
+I’ve purposefully shied away from this topic, it is complicated. The common belief is that mono will reach a desired SNR via the acquisition of LRGB data faster than OSC.
+It is further complicated by the degrees of freedom when it comes to LRGB. The ratio between L and RGB, taking just RGB and synthesizing L, creating a super luminance with all LRGB masters etc. In theory L is much more efficient at achieving a desired SNR compared to OSC as each pixel receives any visible wavelength of photon, and this L will have superior high frequency detail. Quantification of this efficiency would require accurate QE and responsivity curves for the relevant integrals and thus will vary sensor to sensor.
+
+## Conclusion
+
+Hopefully it is now clear that OSC are not automatically inferior to mono due to less photons generating signal, and that there is most definitely not a major 50% or 75% loss in SNR. There is a slight reduction in SNR due to transmission losses through the CFA. A major pitfall of OSC is the loss of high frequency information for a given exposure, especially with narrowband data.
+
+## Further reading
+
+Here are a few articles worth reading for more information on some of the specific things mentioned here:
+
+- Modulation Transfer Function (MTF), Edmund Optics: https://www.edmundoptics.com/knowledge-center/application-notes/optics/introduction-to-modulation-transfer-function/
+- Debayer Study, maxmax.com : https://maxmax.com/maincamerapage/monochrome-cameras/debayer-study
+- Drizzle Paper, Fruchter & Hook 2001 : https://arxiv.org/pdf/astro-ph/9808087.pdf
+
+Thanks to Frito for supplying the asi1600mc and asi1600mm subs.#, img names detected: ['/static/gallery/bayer_1.jpg', '/static/gallery/bayer_2.jpg', 'f.jpg', '/static/gallery/bayer_2.jpg', '/static/gallery/frito.jpg', '/static/gallery/mtf.jpg']
+
+
+Found img tags in body
+Looking for img attached: /static/gallery/bayer_1.jpg
+Looking for img attached: /static/gallery/bayer_2.jpg
+Looking for img attached: f.jpg
+f.jpg was attached!
+Img Handle Status: True
+Looking for img attached: /static/gallery/bayer_2.jpg
+Looking for img attached: /static/gallery/frito.jpg
+Looking for img attached: /static/gallery/mtf.jpg

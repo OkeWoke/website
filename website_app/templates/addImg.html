@@ -1,0 +1,18 @@
+<center>
+Adding image form!
+
+<form action="/add"method="post" enctype="multipart/form-data">
+    Title: <input type="text" name="title"><br>
+    Acquired Date YYYY/MM/DD: <input type ="text" name="acq_dat"><br>
+    Select Image: <input type="file" name="img" accept="image/*"><br>
+    Description<br>
+    <textarea name="description" rows="10" cols="30"></textarea><br>
+    Acquisition Description<br>
+    <textarea name="acq_description" rows="10" cols="30"></textarea><br>
+    Processing Description<br>
+    <textarea name="pro_description" rows="10" cols="30"></textarea><br>
+    
+    <input type="submit" value="Submit"><br>
+    {{status}}
+</form>
+</center>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+    <channel>
+      <title>Oke's Astrophotography</title>
+      <link>https://okewoke.com</link>
+      <description>Amateur astrophotography from OkeWoke</description>
+      <category>Photography</category>
+      <language>en-us</language>
+      
+      <item>
+        <title>New Image: The Tarantula Nebula</title>
+        <link>https://okewoke.com/gallery/16</link>
+        <description>My latest narrowband image of the Tarantula nebula</description>
+        
+        <image>
+          <url>https://okewoke.com/static/gallery/Tarantula%20Nebula-draft_2.jpg</url>
+          <title>Tarantula Nebula</title>
+          <link>https://okewoke.com/gallery/16</link>
+        </image>
+      </item>
+    </channel>
+</rss>
