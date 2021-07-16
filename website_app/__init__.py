@@ -1,5 +1,6 @@
 
-from flask import Flask, jsonify,Response,url_for, send_from_directory, render_template, Markup,make_response, request, Blueprint
+from website_app.routes import *
+from flask import Flask, jsonify, Response, url_for, send_from_directory, render_template, Markup, make_response, request, Blueprint
 from flask_restful import Api, Resource, reqparse
 from flask_httpauth import HTTPBasicAuth
 
@@ -10,19 +11,25 @@ from website_app.modules.database_editor import Blog as blogDBE
 from PIL import Image
 from datetime import date
 import website_app.Utility as util
-import os, math, werkzeug, imghdr, re, json, markdown
+import os
+import math
+import werkzeug
+import imghdr
+import re
+import json
+import markdown
 
 
 try:
-    with open('config.json','r') as config_file:
+    with open('config.json', 'r') as config_file:
         config_data = json.load(config_file)
 except FileNotFoundError:
     print('No config file found, writing a default one')
-    config_data = {'db':'sqlite:///app.db', 'username':'userNameHere', 'password':'passwordHere','directory':''}
-    with open('config.json','w') as config_file:
+    config_data = {'db': 'sqlite:///app.db', 'username': 'userNameHere', 'password': 'passwordHere', 'directory': ''}
+    with open('config.json', 'w') as config_file:
         json.dump(config_data, config_file, indent=4)
 
-app  = Flask(__name__) 
+app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = config_data['db']
 api = Api(app)
 auth = HTTPBasicAuth()
@@ -37,53 +44,55 @@ class GalleryAPI(Resource):
         images = GalleryTable.query.all()[::-1]
         return jsonify([i.serialize() for i in images])
 api.add_resource(GalleryAPI, '/api/')"""
-from website_app.routes import *
 app.register_blueprint(routes)
 
-#basic auth used, requires SSL for any security.
+# basic auth used, requires SSL for any security.
+
+
 @auth.get_password
 def get_password(username):
     if username == config_data['username']:
         return config_data['password']
     return None
 
+
 @auth.error_handler
 def unauthorized():
     return make_response(jsonify({'Error': 'Unauthorized access'}), 401)
-    
+
+
 @app.after_request
 def add_header(response):
     response.cache_control.max_age = 0
-    return response 
-    
+    return response
+
+
 def handleImg(img, title=""):
     """Handles saving image, takes title string and img object, returns true and urls or false and error string"""
-    direc = config_data['directory']#"/var/www/flaskSite/flaskSite/"
-    if title !="": 
-        filename = title+"-"+img.filename
+    direc = config_data['directory']  # "/var/www/flaskSite/flaskSite/"
+    if title != "":
+        filename = title + "-" + img.filename
     else:
         filename = img.filename
-    img.save(direc+"static/gallery/"+filename)
-    if imghdr.what(direc+'static/gallery/'+filename) =='jpeg':
-               
-        im = Image.open(direc+"static/gallery/"+filename)
-        im.thumbnail((300,300))
+    img.save(direc + "static/gallery/" + filename)
+    if imghdr.what(direc + 'static/gallery/' + filename) == 'jpeg':
+
+        im = Image.open(direc + "static/gallery/" + filename)
+        im.thumbnail((300, 300))
         im = im.convert("RGB")
-        im.save(direc+"static/gallery/thumb/T_"+filename,'JPEG')
-                
-        t_url = url_for('static',filename='gallery/thumb/T_'+filename)
-        url = url_for('static', filename='gallery/'+filename)
-                
+        im.save(direc + "static/gallery/thumb/T_" + filename, 'JPEG')
+
+        t_url = url_for('static', filename='gallery/thumb/T_' + filename)
+        url = url_for('static', filename='gallery/' + filename)
+
         return (True, url, t_url)
     else:
         return (False, "Error: Please supply a jpg!")
-            
+
+
 def htmlResp(content):
     """Common template line """
     return Response(render_template('home.html', content=Markup(content)), mimetype='text/html')
-
-
-
 
 
 if __name__ == '__main__':
