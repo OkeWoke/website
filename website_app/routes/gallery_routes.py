@@ -17,11 +17,11 @@ def addImg():
         acq_desc = args.get('acq_description')
         pro_desc = args.get('pro_description')
         img = request.files.get('img')
-        valid = Utility.galleryValidate(title, acq_dat, img, True)
+        valid = galleryValidate(title, acq_dat, img, True)
 
         if valid[0]:
             handle = handleImg(img, title=title)
-            acq_dat = Utility.dateFormat(acq_dat)
+            acq_dat = dateFormat(acq_dat)
             if handle[0]:
                 dbe.insert(title, acq_dat, handle[1], handle[2], desc, acq_desc, pro_desc)
                 valid[1] = "Success!"
@@ -59,10 +59,10 @@ def editImg(id_num):
         acq_desc = args.get('acq_description')
         pro_desc = args.get('pro_description')
         img = request.files.get('img')
-        valid = Utility.galleryValidate(title, acq_dat, img, False)
+        valid = galleryValidate(title, acq_dat, img, False)
 
         if valid[0]:
-            acq_dat = Utility.dateFormat(acq_dat)
+            acq_dat = dateFormat(acq_dat)
             if img is not None and img.filename != "":
                 handle = handleImg(img, title=title)
                 if handle[0]:

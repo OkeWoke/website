@@ -15,7 +15,7 @@ def blogEdit(id_num):
         post_body = args.get('post_body')  
         img_indices = [(m.start() + 9, m.end() - 1) for m in re.finditer(r'img src="[\S^"]+"', post_body)]
 
-        valid = Utility.blogValidate(title)
+        valid = blogValidate(title)
         status = valid[1]
         if len(img_indices) > 0:  # If there are img tags found in the post body...
             offset = 0
@@ -52,7 +52,7 @@ def blogAdd():
         post_body = args.get('post_body')
 
         img_indices = [(m.start() + 9, m.end() - 1) for m in re.finditer(r'img src="[\S^"]+"', post_body)]
-        valid = Utility.blogValidate(title)
+        valid = blogValidate(title)
         status = valid[1]
         if len(img_indices) > 0:  # If there are img tags found in the post body...
             offset = 0
