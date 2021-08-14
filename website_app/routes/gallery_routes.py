@@ -2,7 +2,7 @@ from . import *
 from ..__init__ import *
 
 
-@routes.route('/add', methods=['GET', 'POST'])
+@app.route('/add', methods=['GET', 'POST'])
 @auth.login_required
 def addImg():
     if request.method == 'GET':
@@ -17,11 +17,11 @@ def addImg():
         acq_desc = args.get('acq_description')
         pro_desc = args.get('pro_description')
         img = request.files.get('img')
-        valid = util.galleryValidate(title, acq_dat, img, True)
+        valid = Utility.galleryValidate(title, acq_dat, img, True)
 
         if valid[0]:
             handle = handleImg(img, title=title)
-            acq_dat = util.dateFormat(acq_dat)
+            acq_dat = Utility.dateFormat(acq_dat)
             if handle[0]:
                 dbe.insert(title, acq_dat, handle[1], handle[2], desc, acq_desc, pro_desc)
                 valid[1] = "Success!"
@@ -30,7 +30,7 @@ def addImg():
         return htmlResp(render_template('addImg.html', status=valid[1]))
 
 
-@routes.route('/edit', methods=['GET', 'POST'])
+@app.route('/edit', methods=['GET', 'POST'])
 @auth.login_required
 def editGallery():
     html_content = "<div class='gallery'> Click on an image to edit it<br>"
@@ -44,7 +44,7 @@ def editGallery():
     return htmlResp(html_content)
 
 
-@routes.route('/edit/<int:id_num>', methods=['GET', 'POST'])
+@app.route('/edit/<int:id_num>', methods=['GET', 'POST'])
 @auth.login_required
 def editImg(id_num):
     if request.method == 'GET':
@@ -59,10 +59,10 @@ def editImg(id_num):
         acq_desc = args.get('acq_description')
         pro_desc = args.get('pro_description')
         img = request.files.get('img')
-        valid = util.galleryValidate(title, acq_dat, img, False)
+        valid = Utility.galleryValidate(title, acq_dat, img, False)
 
         if valid[0]:
-            acq_dat = util.dateFormat(acq_dat)
+            acq_dat = Utility.dateFormat(acq_dat)
             if img is not None and img.filename != "":
                 handle = handleImg(img, title=title)
                 if handle[0]:
@@ -75,7 +75,7 @@ def editImg(id_num):
         return htmlResp(render_template('editImg.html', title=title, date=acq_dat, desc=desc, id=id_num, status=valid[1], acq_desc=acq_desc, pro_desc=pro_desc))
 
 
-@routes.route('/gallery')
+@app.route('/gallery')
 def galleryGet():
     html_content = "<div class='gallery'>Click on an image for larger res and details!<br>"
     images = GalleryTable.query.all()[::-1]
@@ -89,7 +89,7 @@ def galleryGet():
     return htmlResp(html_content)
 
 
-@routes.route('/gallery/<int:id_num>')
+@app.route('/gallery/<int:id_num>')
 def galleryEntry(id_num):
     entry = GalleryTable.query.filter_by(id=id_num).first()
     html_content = render_template('post.html', title=entry.title, dat_cre=entry.acquired_date, dat_pos=entry.post_date, img_url=entry.img_uri, description=entry.description, acq_description=entry.acquisition_desc, pro_description=entry.processing_desc)

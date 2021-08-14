@@ -2,7 +2,7 @@ from . import *
 from ..__init__ import *
 
 
-@routes.route('/blogEdit/<int:id_num>', methods=['GET', 'POST'])
+@app.route('/blogEdit/<int:id_num>', methods=['GET', 'POST'])
 @auth.login_required
 def blogEdit(id_num):
     if request.method == 'GET':
@@ -12,27 +12,24 @@ def blogEdit(id_num):
     elif request.method == 'POST':
         args = request.form
         title = args.get('title')
-        post_body = args.get('post_body')
-        f = open("debugnew.txt", "a+")
+        post_body = args.get('post_body')  
         img_indices = [(m.start() + 9, m.end() - 1) for m in re.finditer(r'img src="[\S^"]+"', post_body)]
-        f.write("\n\n\n########\nPOST: title: {0}, post_body: #{1}#, img names detected: {2}\n\n\n".format(title, post_body, str([post_body[int(s):int(e)] for (s, e) in img_indices])))
-        status = ""
+
+        valid = Utility.blogValidate(title)
+        status = valid[1]
         if len(img_indices) > 0:  # If there are img tags found in the post body...
-            f.write("Found img tags in body\n")
             offset = 0
             for indice_pair in img_indices:
                 (s, e) = indice_pair
                 s, e = int(s) + offset, int(e) + offset
                 raw_img_string = post_body[s:e]
-                f.write("Looking for img attached: {0}\n".format(raw_img_string))
+               
                 img = request.files.get(raw_img_string)
                 if img is None:  # No Image Attached
                     if "static/gallery/" not in raw_img_string:  # not pre-existing img
                         status += '{0} <input type="file" name="{1}" accept="image/*"><br>\n'.format(raw_img_string, raw_img_string)
                 else:  # We found an attached image!
-                    f.write("{0} was attached!\n".format(raw_img_string))
                     handle = handleImg(img)  # bool, url, t_url
-                    f.write("Img Handle Status: {0}\n".format(handle[0]))
                     if handle[0]:
                         post_body = post_body[:s] + handle[1] + post_body[e:]
                         offset += (len(handle[1]) - len(raw_img_string))
@@ -44,38 +41,32 @@ def blogEdit(id_num):
             return htmlResp(render_template('editBlog.html', id=id_num, title=title, post_body=post_body, status=status))
 
 
-@routes.route('/blogAdd', methods=['GET', 'POST'])
+@app.route('/blogAdd', methods=['GET', 'POST'])
 @auth.login_required
 def blogAdd():
-
     if request.method == 'GET':
         return htmlResp(render_template('addBlog.html'))
     elif request.method == 'POST':
-        f = open("debugnew.txt", "a+")
-
         args = request.form
         title = args.get('title')
         post_body = args.get('post_body')
 
         img_indices = [(m.start() + 9, m.end() - 1) for m in re.finditer(r'img src="[\S^"]+"', post_body)]
-        f.write("\n\n\n########\nPOST: title: {0}, post_body: #{1}#, img names detected: {2}\n\n\n".format(title, post_body, str([post_body[int(s):int(e)] for (s, e) in img_indices])))
-        status = ""
+        valid = Utility.blogValidate(title)
+        status = valid[1]
         if len(img_indices) > 0:  # If there are img tags found in the post body...
-            f.write("Found img tags in body\n")
             offset = 0
             for indice_pair in img_indices:
                 (s, e) = indice_pair
                 s, e = int(s) + offset, int(e) + offset
                 raw_img_string = post_body[s:e]
-                f.write("Looking for img attached: {0}\n".format(raw_img_string))
+                
                 img = request.files.get(raw_img_string)
                 if img is None:  # No Image Attached
                     if "static/gallery/" not in raw_img_string:  # not pre-existing img
-                        status += '{0} <input type="file" name="{1}" accept="image/*"><br>\n'.format(raw_img_string, raw_img_string)
+                        status += '<br>{0} <input type="file" name="{1}" accept="image/*">\n'.format(raw_img_string, raw_img_string)
                 else:  # We found an attached image!
-                    f.write("{0} was attached!\n".format(raw_img_string))
                     handle = handleImg(img)  # bool, url, t_url
-                    f.write("Img Handle Status: {0}\n".format(handle[0]))
                     if handle[0]:
                         post_body = post_body[:s] + handle[1] + post_body[e:]
                         offset += (len(handle[1]) - len(raw_img_string))
@@ -87,7 +78,7 @@ def blogAdd():
             return htmlResp(render_template('addBlog.html', title=title, post_body=post_body, status=status))
 
 
-@routes.route('/blog/<int:id_num>')
+@app.route('/blog/<int:id_num>')
 def blogEntry(id_num):
     entry = BlogTable.query.filter_by(id=id_num).first()
     html_post_body = markdown.markdown(entry.post_body)
@@ -96,7 +87,7 @@ def blogEntry(id_num):
     return htmlResp(html_content)
 
 
-@routes.route('/blog')
+@app.route('/blog')
 def blogGet():
     html_content = "<div class='blog'><ul>"
     blog_entries = BlogTable.query.all()[::-1]

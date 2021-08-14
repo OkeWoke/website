@@ -1,5 +1,3 @@
-
-from website_app.routes import *
 from flask import Flask, jsonify, Response, url_for, send_from_directory, render_template, Markup, make_response, request, Blueprint
 from flask_restful import Api, Resource, reqparse
 from flask_httpauth import HTTPBasicAuth
@@ -44,7 +42,7 @@ class GalleryAPI(Resource):
         images = GalleryTable.query.all()[::-1]
         return jsonify([i.serialize() for i in images])
 api.add_resource(GalleryAPI, '/api/')"""
-app.register_blueprint(routes)
+#app.register_blueprint(routes)
 
 # basic auth used, requires SSL for any security.
 
@@ -66,34 +64,10 @@ def add_header(response):
     response.cache_control.max_age = 0
     return response
 
-
-def handleImg(img, title=""):
-    """Handles saving image, takes title string and img object, returns true and urls or false and error string"""
-    direc = config_data['directory']  # "/var/www/flaskSite/flaskSite/"
-    if title != "":
-        filename = title + "-" + img.filename
-    else:
-        filename = img.filename
-    img.save(direc + "static/gallery/" + filename)
-    if imghdr.what(direc + 'static/gallery/' + filename) == 'jpeg':
-
-        im = Image.open(direc + "static/gallery/" + filename)
-        im.thumbnail((300, 300))
-        im = im.convert("RGB")
-        im.save(direc + "static/gallery/thumb/T_" + filename, 'JPEG')
-
-        t_url = url_for('static', filename='gallery/thumb/T_' + filename)
-        url = url_for('static', filename='gallery/' + filename)
-
-        return (True, url, t_url)
-    else:
-        return (False, "Error: Please supply a jpg!")
-
-
-def htmlResp(content):
-    """Common template line """
-    return Response(render_template('home.html', content=Markup(content)), mimetype='text/html')
-
+# Routes Import
+from website_app.routes.blog_routes import *
+from website_app.routes.gallery_routes import *
+from website_app.routes.misc_routes import *
 
 if __name__ == '__main__':
     app.run()

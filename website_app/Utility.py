@@ -1,6 +1,8 @@
 # Utility static class
 import re
 from datetime import date
+from flask import Flask, jsonify, Response, url_for, send_from_directory, render_template, Markup, make_response, request
+from PIL import Image
 
 def handleImg(img, title=""):
     """Handles saving image, takes title string and img object, returns true and urls or false and error string"""
@@ -71,10 +73,11 @@ def imgCheck(img, require_img):
 
 def galleryValidate(title, acq_dat, img, req_img):
     """Validates form data, title, date and img, returns (success bool, status string)"""
-    result = list(zip(titleCheck(title), dateCheck(acq_dat), imgCheck(img, req_img))
+    result = list(zip(titleCheck(title), dateCheck(acq_dat), imgCheck(img, req_img)))
     return result[0].all(), '\n'.join(result[1])
 
-
+def blogValidate(title):
+    return titleCheck(title)
 
 
 

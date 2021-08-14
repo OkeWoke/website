@@ -2,12 +2,12 @@ from . import *
 from ..__init__ import *
 
 
-@routes.route('/favicon.ico')
+@app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
+ 
 
-
-@routes.route('/')
+@app.route('/')
 def front():
     print('aa')
     latImg = GalleryTable.query.all()[-1]
@@ -15,19 +15,19 @@ def front():
     return htmlResp(html_content)
 
 
-@routes.route('/about')
+@app.route('/about')
 def about():
     html_content = render_template('about.html')
     return htmlResp(html_content)
 
 
-@routes.route('/contact')
+@app.route('/contact')
 def contact():
     html_content = render_template('contact.html')
     return htmlResp(html_content)
 
 
-@routes.route('/feed')
+@app.route('/feed')
 def feed():
     with open('rss.xml', 'r') as file:
         return Response(file.read(), mimetype='text/xml')
