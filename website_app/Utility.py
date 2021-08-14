@@ -5,9 +5,8 @@ from flask import Flask, jsonify, Response, url_for, send_from_directory, render
 from PIL import Image
 import string
 
-def handleImg(img, title=""):
+def handleImg(img, direc, title=""):
     """Handles saving image, takes title string and img object, returns true and urls or false and error string"""
-    direc = config_data['directory']  # "/var/www/flaskSite/flaskSite/"
     if title != "":
         filename = title + "-" + img.filename
     else:

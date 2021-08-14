@@ -29,7 +29,7 @@ def blogEdit(id_num):
                     if "static/gallery/" not in raw_img_string:  # not pre-existing img
                         status += '{0} <input type="file" name="{1}" accept="image/*"><br>\n'.format(raw_img_string, raw_img_string)
                 else:  # We found an attached image!
-                    handle = handleImg(img)  # bool, url, t_url
+                    handle = handleImg(img, config_data['directory'])  # bool, url, t_url
                     if handle[0]:
                         post_body = post_body[:s] + handle[1] + post_body[e:]
                         offset += (len(handle[1]) - len(raw_img_string))
@@ -66,7 +66,7 @@ def blogAdd():
                     if "static/gallery/" not in raw_img_string:  # not pre-existing img
                         status += '<br>{0} <input type="file" name="{1}" accept="image/*">\n'.format(raw_img_string, raw_img_string)
                 else:  # We found an attached image!
-                    handle = handleImg(img)  # bool, url, t_url
+                    handle = handleImg(img, config_data['directory'])  # bool, url, t_url
                     if handle[0]:
                         post_body = post_body[:s] + handle[1] + post_body[e:]
                         offset += (len(handle[1]) - len(raw_img_string))

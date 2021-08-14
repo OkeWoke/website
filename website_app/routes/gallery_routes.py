@@ -20,7 +20,7 @@ def addImg():
         valid = galleryValidate(title, acq_dat, img, True)
 
         if valid[0]:
-            handle = handleImg(img, title=title)
+            handle = handleImg(img, config_data['directory'], title=title)
             acq_dat = dateFormat(acq_dat)
             if handle[0]:
                 dbe.insert(title, acq_dat, handle[1], handle[2], desc, acq_desc, pro_desc)
@@ -64,7 +64,7 @@ def editImg(id_num):
         if valid[0]:
             acq_dat = dateFormat(acq_dat)
             if img is not None and img.filename != "":
-                handle = handleImg(img, title=title)
+                handle = handleImg(img, config_data['directory'], title=title)
                 if handle[0]:
                     dbe.edit(id_num, title, acq_dat, desc, acq_desc, pro_desc, handle[1], handle[2])
                 else:
