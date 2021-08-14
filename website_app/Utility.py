@@ -57,7 +57,7 @@ def titleCheck(title):
     if not check:
         return False, "Error: Title must contain alphanumeric characters!"
     for sub in check:
-        if not sub.isalnum() or not any([x in valid_chars for x in sub]):
+        if not sub.isalnum() and not any([x in valid_chars for x in sub]):
             return False, "Error: Title must contain alphanumeric characters!"
     return True, ""
 
@@ -80,6 +80,3 @@ def galleryValidate(title, acq_dat, img, req_img):
 
 def blogValidate(title):
     return titleCheck(title)
-
-
-
