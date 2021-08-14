@@ -19,12 +19,12 @@ import markdown
 
 print("Working Dir: {0}".format(os.getcwd()))
 try:
-    with open('../config.json', 'r') as config_file:
+    with open('config.json', 'r') as config_file:
         config_data = json.load(config_file)
 except FileNotFoundError:
     print('No config file found, writing a default one')
     config_data = {'db': 'sqlite:///app.db', 'username': 'userNameHere', 'password': 'passwordHere', 'directory': ''}
-    with open('../config.json', 'w') as config_file:
+    with open('config.json', 'w') as config_file:
         json.dump(config_data, config_file, indent=4)
 
 
