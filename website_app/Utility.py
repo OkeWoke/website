@@ -3,6 +3,7 @@ import re
 from datetime import date
 from flask import Flask, jsonify, Response, url_for, send_from_directory, render_template, Markup, make_response, request
 from PIL import Image
+import imghdr
 import string
 
 def handleImg(img, direc, title=""):

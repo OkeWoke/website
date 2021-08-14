@@ -12,7 +12,6 @@ from website_app import Utility as util
 import os
 import math
 import werkzeug
-import imghdr
 import re
 import json
 import markdown
