@@ -8,7 +8,7 @@ from website_app.modules.database_editor import Blog as blogDBE
 
 from PIL import Image
 from datetime import date
-import website_app.Utility as util
+import Utility as util
 import os
 import math
 import werkzeug
@@ -17,7 +17,7 @@ import re
 import json
 import markdown
 
-
+print("Working Dir: {0}".format(os.getcwd()))
 try:
     with open('../config.json', 'r') as config_file:
         config_data = json.load(config_file)
@@ -26,6 +26,7 @@ except FileNotFoundError:
     config_data = {'db': 'sqlite:///app.db', 'username': 'userNameHere', 'password': 'passwordHere', 'directory': ''}
     with open('../config.json', 'w') as config_file:
         json.dump(config_data, config_file, indent=4)
+except
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = config_data['db']
