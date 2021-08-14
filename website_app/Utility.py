@@ -3,6 +3,7 @@ import re
 from datetime import date
 from flask import Flask, jsonify, Response, url_for, send_from_directory, render_template, Markup, make_response, request
 from PIL import Image
+import string
 
 def handleImg(img, title=""):
     """Handles saving image, takes title string and img object, returns true and urls or false and error string"""
@@ -51,11 +52,12 @@ def dateCheck(date_acq):
 def titleCheck(title):
     """Takes in title string, checks to ensure it contains(and only) alphanumeric chars,
     returns success bool and status string"""
+    valid_chars = string.digits + string.ascii_letters + "." + "&"
     check = title.split(' ')
     if not check:
         return False, "Error: Title must contain alphanumeric characters!"
     for sub in check:
-        if not sub.isalnum():
+        if not sub.isalnum() or not any([x in valid_chars for x in sub]):
             return False, "Error: Title must contain alphanumeric characters!"
     return True, ""
 
