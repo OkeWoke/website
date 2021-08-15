@@ -1,6 +1,0 @@
-{
-    "db": "sqlite:///app.db",
-    "username": "userNameHere",
-    "password": "passwordHere",
-    "directory": "C:/Users/OkeWoke/Documents/flaskSite/website_app/"
-}
