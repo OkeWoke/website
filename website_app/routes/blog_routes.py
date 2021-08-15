@@ -51,7 +51,7 @@ def blogAdd():
         title = args.get('title')
         post_body = args.get('post_body')
 
-        img_indices = [(m.start() + 9, m.end() - 1) for m in re.finditer(r'img src="[\S^"]+"', post_body)]
+        img_indices = [(m.start() + 9, m.end() - 1) for m in re.finditer(r'img src=[\",\'][\S^"]+[\",\']', post_body)]
         valid = blogValidate(title)
         status = valid[1]
         if len(img_indices) > 0:  # If there are img tags found in the post body...
@@ -70,6 +70,8 @@ def blogAdd():
                     if handle[0]:
                         post_body = post_body[:s] + handle[1] + post_body[e:]
                         offset += (len(handle[1]) - len(raw_img_string))
+                    else:
+                        status+="<br> {0}".format(handle[1])
 
         if status == "":
             blogdbe.insert(title, post_body)

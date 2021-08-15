@@ -6,26 +6,31 @@ from PIL import Image
 import imghdr
 import string
 
+FILE_EXTENSIONS = ['jpeg', 'png', 'gif', 'jpg']
+    
 def handleImg(img, direc, title=""):
     """Handles saving image, takes title string and img object, returns true and urls or false and error string"""
+
     if title != "":
         filename = title + "-" + img.filename
     else:
         filename = img.filename
-    img.save(direc + "static/gallery/" + filename)
-    if imghdr.what(direc + 'static/gallery/' + filename) == 'jpeg':
+    clean_filename, file_ext = filename.rsplit('.', maxsplit=1)
+    if file_ext in FILE_EXTENSIONS:
+        img.save(direc + "static/gallery/" + filename)
+        if imghdr.what(direc + 'static/gallery/' + filename) in FILE_EXTENSIONS:
+            im = Image.open(direc + "static/gallery/" + filename)
+            im.thumbnail((300, 300))
+            im = im.convert("RGB")
+            t_filename = filename.rstrip('.')
+            im.save(direc + "static/gallery/thumb/T_" + clean_filename+".jpg", 'JPEG')
 
-        im = Image.open(direc + "static/gallery/" + filename)
-        im.thumbnail((300, 300))
-        im = im.convert("RGB")
-        im.save(direc + "static/gallery/thumb/T_" + filename, 'JPEG')
+            t_url = url_for('static', filename='gallery/thumb/T_' +clean_filename+".jpg")
+            url = url_for('static', filename='gallery/' + filename)
 
-        t_url = url_for('static', filename='gallery/thumb/T_' + filename)
-        url = url_for('static', filename='gallery/' + filename)
-
-        return (True, url, t_url)
+            return (True, url, t_url)
     else:
-        return (False, "Error: Please supply a jpg!")
+        return (False, "Error: Please supply a valid format: {0}!".format(FILE_EXTENSIONS))
 
 
 def htmlResp(content):
@@ -65,18 +70,20 @@ def titleCheck(title):
 def imgCheck(img, require_img):
     """Takes in image and if required bool, determines if image is of valid type,
     returns success bool and status string"""
+    clean_filename, file_ext = img.filename.rsplit('.', maxsplit=1)
     if img is None and require_img:
         return False, "Error: No file selected!"
     elif img is not None and img.filename != "":
-        if img.filename[-4:] != "jpeg" and img.filename[-3:] != "jpg":
-            return False, "Error: Please supply a jpg!" + str(img.filename)
+        if file_ext not in FILE_EXTENSIONS:
+            return False, "Error: Please supply a valid format: {0}!".format(FILE_EXTENSIONS)
     return True, ""
 
 
 def galleryValidate(title, acq_dat, img, req_img):
     """Validates form data, title, date and img, returns (success bool, status string)"""
     result = list(zip(titleCheck(title), dateCheck(acq_dat), imgCheck(img, req_img)))
-    return result[0].all(), '\n'.join(result[1])
+    #result = [list(x) for x in result]
+    return [all(result[0]), '\n'.join(result[1])]
 
 def blogValidate(title):
     return titleCheck(title)
