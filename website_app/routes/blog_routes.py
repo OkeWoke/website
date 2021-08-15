@@ -1,6 +1,34 @@
 from . import *
 from ..__init__ import *
 
+def blogAddEdit(request):
+    args = request.form
+    title = args.get('title')
+    post_body = args.get('post_body')
+    img_indices = [(m.start() + 9, m.end() - 1) for m in re.finditer(r'img src=[\",\'][\S^"]+[\",\']', post_body)]
+    
+    valid = blogValidate(title)
+    status = valid[1]
+    if len(img_indices) > 0:  # If there are img tags found in the post body...
+        offset = 0
+        for indice_pair in img_indices:
+            (s, e) = indice_pair
+            s, e = int(s) + offset, int(e) + offset
+            raw_img_string = post_body[s:e]
+            
+            img = request.files.get(raw_img_string)
+            if img is None:  # No Image Attached
+                if "static/gallery/" not in raw_img_string:  # not pre-existing img
+                    status += '<br>{0} <input type="file" name="{1}" accept="image/*">\n'.format(raw_img_string, raw_img_string)
+            else:  # We found an attached image!
+                handle = handleImg(img, config_data['directory'])  # bool, url, t_url
+                if handle[0]:
+                    post_body = post_body[:s] + handle[1] + post_body[e:]
+                    offset += (len(handle[1]) - len(raw_img_string))
+                else:
+                    status+="<br> {0}".format(handle[1])
+    return status, title, post_body
+
 
 @app.route('/blogEdit/<int:id_num>', methods=['GET', 'POST'])
 @auth.login_required
@@ -10,30 +38,7 @@ def blogEdit(id_num):
         return htmlResp(render_template('editBlog.html', id=id_num, title=entry.title, post_body=entry.post_body))
 
     elif request.method == 'POST':
-        args = request.form
-        title = args.get('title')
-        post_body = args.get('post_body')  
-        img_indices = [(m.start() + 9, m.end() - 1) for m in re.finditer(r'img src="[\S^"]+"', post_body)]
-
-        valid = blogValidate(title)
-        status = valid[1]
-        if len(img_indices) > 0:  # If there are img tags found in the post body...
-            offset = 0
-            for indice_pair in img_indices:
-                (s, e) = indice_pair
-                s, e = int(s) + offset, int(e) + offset
-                raw_img_string = post_body[s:e]
-               
-                img = request.files.get(raw_img_string)
-                if img is None:  # No Image Attached
-                    if "static/gallery/" not in raw_img_string:  # not pre-existing img
-                        status += '{0} <input type="file" name="{1}" accept="image/*"><br>\n'.format(raw_img_string, raw_img_string)
-                else:  # We found an attached image!
-                    handle = handleImg(img, config_data['directory'])  # bool, url, t_url
-                    if handle[0]:
-                        post_body = post_body[:s] + handle[1] + post_body[e:]
-                        offset += (len(handle[1]) - len(raw_img_string))
-
+        status, title, post_body = blogAddEdit(request)
         if status == "":
             blogdbe.edit(id_num, title, post_body)
             return htmlResp(render_template('editBlog.html', status="Success!"))
@@ -47,32 +52,7 @@ def blogAdd():
     if request.method == 'GET':
         return htmlResp(render_template('addBlog.html'))
     elif request.method == 'POST':
-        args = request.form
-        title = args.get('title')
-        post_body = args.get('post_body')
-
-        img_indices = [(m.start() + 9, m.end() - 1) for m in re.finditer(r'img src=[\",\'][\S^"]+[\",\']', post_body)]
-        valid = blogValidate(title)
-        status = valid[1]
-        if len(img_indices) > 0:  # If there are img tags found in the post body...
-            offset = 0
-            for indice_pair in img_indices:
-                (s, e) = indice_pair
-                s, e = int(s) + offset, int(e) + offset
-                raw_img_string = post_body[s:e]
-                
-                img = request.files.get(raw_img_string)
-                if img is None:  # No Image Attached
-                    if "static/gallery/" not in raw_img_string:  # not pre-existing img
-                        status += '<br>{0} <input type="file" name="{1}" accept="image/*">\n'.format(raw_img_string, raw_img_string)
-                else:  # We found an attached image!
-                    handle = handleImg(img, config_data['directory'])  # bool, url, t_url
-                    if handle[0]:
-                        post_body = post_body[:s] + handle[1] + post_body[e:]
-                        offset += (len(handle[1]) - len(raw_img_string))
-                    else:
-                        status+="<br> {0}".format(handle[1])
-
+        status, title, post_body = blogAddEdit(request)
         if status == "":
             blogdbe.insert(title, post_body)
             return htmlResp(render_template('addBlog.html', status="Success!"))
