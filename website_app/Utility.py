@@ -70,10 +70,11 @@ def titleCheck(title):
 def imgCheck(img, require_img):
     """Takes in image and if required bool, determines if image is of valid type,
     returns success bool and status string"""
-    clean_filename, file_ext = img.filename.rsplit('.', maxsplit=1)
+
     if img is None and require_img:
         return False, "Error: No file selected!"
     elif img is not None and img.filename != "":
+        clean_filename, file_ext = img.filename.rsplit('.', maxsplit=1)
         if file_ext not in FILE_EXTENSIONS:
             return False, "Error: Please supply a valid format: {0}!".format(FILE_EXTENSIONS)
     return True, ""
